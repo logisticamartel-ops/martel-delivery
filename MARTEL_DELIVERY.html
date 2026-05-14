@@ -741,6 +741,7 @@ const ZONAS = {
 
 // ── AUTH ──────────────────────────────────────────────────────
 const PASSWORDS = {
+  admin:        'MARTEL2026',
   arenales:     'ARENALES',
   trescerritos: 'TRESCERRITOS',
   rioja:        'RIOJA',
@@ -753,7 +754,13 @@ let sesionRol = null;
 let _loginTargetSuc = null;
 
 function loginAdmin(){
-  document.getElementById('loginOverlay').style.display = 'none';
+  _loginTargetSuc = 'admin';
+  document.getElementById('loginPassTitle').textContent = 'Administrador';
+  document.getElementById('loginPassInput').value = '';
+  document.getElementById('loginPassErr').textContent = '';
+  document.getElementById('loginBtns').style.display = 'none';
+  document.getElementById('loginPassSection').style.display = 'block';
+  setTimeout(function(){ document.getElementById('loginPassInput').focus(); }, 50);
 }
 
 function loginSucursal(s){
@@ -774,11 +781,17 @@ function volverLoginOpciones(){
 function confirmarLoginPass(){
   const val = document.getElementById('loginPassInput').value;
   if(val === PASSWORDS[_loginTargetSuc]){
-    sesionRol = _loginTargetSuc;
-    document.getElementById('loginOverlay').style.display = 'none';
-    document.body.classList.add('suc-mode');
-    goSuc(sesionRol);
-    setTimeout(sincronizarActual, 300);
+    if(_loginTargetSuc === 'admin'){
+      sesionRol = null;
+      document.getElementById('loginOverlay').style.display = 'none';
+      setTimeout(sincronizarActual, 300);
+    } else {
+      sesionRol = _loginTargetSuc;
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.body.classList.add('suc-mode');
+      goSuc(sesionRol);
+      setTimeout(sincronizarActual, 300);
+    }
   } else {
     document.getElementById('loginPassErr').textContent = 'Contraseña incorrecta';
     document.getElementById('loginPassInput').select();
