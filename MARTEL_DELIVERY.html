@@ -1359,6 +1359,11 @@ function asgCh(id,ch,sel){
   const p=ALL.find(x=>x.id===id); if(!p) return;
   p.chofer=ch; sel.className=`csel ${ch?'ok':''}`;
   updKPIs();
+  escribirChofer(p,ch);
+}
+function escribirChofer(p,chofer){
+  const params=new URLSearchParams({action:'write_chofer',sucursal:p.sucursal,cliente:p.cliente,factura:p.factura,chofer:chofer||''});
+  const img=new Image(); img.src=GAS_URL+'?'+params.toString();
 }
 function updBtn(){
   const n=ALL.filter(p=>p.til).length;
