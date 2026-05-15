@@ -909,25 +909,30 @@ function procesarDatosGAS(filas, sucursal){
     const domicilio=CD>=0?String(f[CD]||'').trim():'';
     if(!nombre&&!domicilio) continue;
     const estadoVal=CE>=0?String(f[CE]||'').trim():'';
-    if(normEst(estadoVal)==='entregado') continue;
+    const esEntregado=normEst(estadoVal)==='entregado';
     const fechaStr=CFC>=0?String(f[CFC]||'').trim():'';
-    if(fechaStr){const fp=parseFecha(fechaStr);if(fp&&!isNaN(fp)&&fp<seisM) continue;}
+    if(fechaStr){
+      const fp=parseFecha(fechaStr);
+      if(fp&&!isNaN(fp)){
+        if(fp<seisM) continue;
+        if(esEntregado){const sieteDias=new Date();sieteDias.setDate(sieteDias.getDate()-7);sieteDias.setHours(0,0,0,0);if(fp<sieteDias) continue;}
+      }
+    } else if(esEntregado) continue;
     let fechaDisplay=fechaStr;
     if(fechaStr){const fp=parseFecha(fechaStr);if(fp&&!isNaN(fp))fechaDisplay=fp.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'});}
     const remitoRaw=CR>=0&&f.length>CR?String(f[CR]||'').trim():'';
     const cliStr=CI>=0?String(f[CI]||'').trim():'';
     const facStr=CF>=0?String(f[CF]||'').trim():'';
-    // Buscar en los previos (antes del filter)
     const existing = previos.find(x=>x.cliente===cliStr && x.factura===facStr);
-    if(existing && existing.estado==='entregado') continue;
     const choferSheets = detCh(CCH>=0?String(f[CCH]||'').toLowerCase():'');
     const choferFinal = existing && existing.chofer ? existing.chofer : choferSheets;
-    const remitoFinal = existing ? existing.remito : remitoRaw;
+    const remitoFinal = existing ? existing.remito : (esEntregado ? (remitoRaw||'completo') : remitoRaw);
     const tilFinal = existing ? existing.til : false;
+    const estadoFinal = esEntregado ? 'entregado' : (existing ? existing.estado : 'pendiente');
     nuevos.push({id:uid++,cliente:cliStr,nombre:nombre,
       factura:facStr,domicilio:domicilio,fecha:fechaDisplay,
       sucursal:sucursal,chofer:choferFinal,
-      estado:'pendiente',remito:remitoFinal,til:tilFinal,_lat:null,_lng:null});
+      estado:estadoFinal,remito:remitoFinal,til:tilFinal,_lat:null,_lng:null});
   }
   ALL=ALL.concat(nuevos);
   return nuevos.length;
