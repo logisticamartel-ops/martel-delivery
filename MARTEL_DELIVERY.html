@@ -546,6 +546,9 @@ tbody tr.entregado:hover{opacity:.65}
               <button class="ep-tab active-ent" id="tabEnt" onclick="switchEpTab('ent')">✓ Completados <span class="ep-count" id="epCount">0</span></button>
               <button class="ep-tab" id="tabCh" onclick="switchEpTab('ch')">👥 Choferes</button>
             </div>
+            <div id="epSearchWrap" style="padding:6px 8px;border-bottom:1px solid var(--border);flex-shrink:0">
+              <input id="epSearch" type="text" placeholder="Buscar nombre o factura..." oninput="filtrarCompletados()" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:4px 8px;font-family:var(--sans);font-size:11px;color:var(--text);outline:none;box-sizing:border-box"/>
+            </div>
             <div class="ep-list" id="epPanelEnt">
               <div class="ep-empty">Sin completados aún</div>
             </div>
@@ -1487,9 +1490,14 @@ function switchEpTab(tab){
   if(tab==='ch') renderChoferPanel();
 }
 
-function renderEntregados(){
+function filtrarCompletados(){
+  const q = (document.getElementById('epSearch')||{}).value||'';
+  renderEntregados(q);
+}
+function renderEntregados(busqueda){
+  const q = (busqueda||'').toLowerCase().trim();
   const filtroSuc = (suc && suc!=='todas' && suc!=='circuito') ? suc : null;
-  const entregados = ALL.filter(p=>p.estado==='entregado' && (!filtroSuc || p.sucursal===filtroSuc));
+  const entregados = ALL.filter(p=>p.estado==='entregado' && (!filtroSuc || p.sucursal===filtroSuc) && (!q || p.nombre.toLowerCase().includes(q) || p.factura.toLowerCase().includes(q)));
   const cnt = document.getElementById('epCount');
   const list = document.getElementById('epPanelEnt');
   if(!list||!cnt) return;
