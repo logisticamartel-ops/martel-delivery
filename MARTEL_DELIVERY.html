@@ -1278,7 +1278,7 @@ function render(){
     // Agrupar por zona
     const grupos = {};
     ped.forEach(p=>{
-      const z = detectarZona(p.domicilio);
+      const z = detectarZona(p.domicilio, p._lat, p._lng);
       if(!grupos[z]) grupos[z]=[];
       grupos[z].push(p);
     });
@@ -1387,7 +1387,24 @@ function updKPIs(){
   const elCircuito = document.getElementById('b-circuito');
   if(elCircuito) elCircuito.textContent = ALL.filter(p=>p.til).length;
 }
-function detectarZona(domicilio){
+function detectarZonaPorCoordenadas(lat, lng){
+  // Centro — rectángulo central de Salta
+  if(lat >= -24.800 && lat <= -24.772 && lng >= -65.428 && lng <= -65.396) return 'Centro';
+  // Norte — al norte del centro (Tres Cerritos, Castañares, 20 de Febrero)
+  if(lat > -24.782) return 'Norte';
+  // Este — al este de la vertical central (Floresta, San Bernardo, Asunción)
+  if(lng > -65.393) return 'Este';
+  // Noroeste — cuadrante noroeste (La Loma, El Cambio, San Lorenzo)
+  if(lat > -24.820 && lng < -65.428) return 'Noroeste';
+  // Suroeste — cuadrante suroeste (Aeropuerto, La Ciénaga, Solís Pizarro)
+  if(lng < -65.435) return 'Suroeste';
+  // Sur — todo lo demás al sur del centro (Güemes, Norte Grande, Limache)
+  return 'Sur';
+}
+function detectarZona(domicilio, lat, lng){
+  // Si tenemos coordenadas geocodificadas, usarlas (más preciso)
+  if(lat && lng) return detectarZonaPorCoordenadas(lat, lng);
+  // Fallback: detección por texto
   const d = domicilio.toLowerCase();
   for(const [zona, keywords] of Object.entries(ZONAS)){
     if(zona === 'Otros') continue;
