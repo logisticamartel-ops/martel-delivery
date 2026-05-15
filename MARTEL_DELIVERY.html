@@ -1442,7 +1442,8 @@ function switchEpTab(tab){
 }
 
 function renderEntregados(){
-  const entregados = ALL.filter(p=>p.estado==='entregado');
+  const filtroSuc = (suc && suc!=='todas' && suc!=='circuito') ? suc : null;
+  const entregados = ALL.filter(p=>p.estado==='entregado' && (!filtroSuc || p.sucursal===filtroSuc));
   const cnt = document.getElementById('epCount');
   const list = document.getElementById('epPanelEnt');
   if(!list||!cnt) return;
