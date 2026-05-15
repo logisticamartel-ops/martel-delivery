@@ -1344,19 +1344,38 @@ function eliminarPedido(id){
 }
 
 
+function guardarTildados(){
+  const ahora = Date.now();
+  const datos = ALL.filter(p=>p.til).map(p=>({cliente:p.cliente,factura:p.factura,ts:ahora}));
+  try{ localStorage.setItem('martel_tildados', JSON.stringify(datos)); }catch(e){}
+}
+function restaurarTildados(){
+  try{
+    const raw = localStorage.getItem('martel_tildados');
+    if(!raw) return;
+    const datos = JSON.parse(raw);
+    const limite = Date.now() - 48*60*60*1000;
+    const vigentes = datos.filter(d=>d.ts>=limite);
+    vigentes.forEach(function(d){
+      const p = ALL.find(x=>x.cliente===d.cliente && x.factura===d.factura && x.estado!=='entregado');
+      if(p) p.til = true;
+    });
+    localStorage.setItem('martel_tildados', JSON.stringify(vigentes));
+  }catch(e){}
+}
 function tildar(id,v,tr){
   const p=ALL.find(x=>x.id===id); if(p){ p.til=v; tr.classList.toggle('til',v); }
-  updKPIs(); updBtn();
+  updKPIs(); updBtn(); guardarTildados();
 }
 function toggleRow(id,tr){
   const p=ALL.find(x=>x.id===id); if(!p) return;
   p.til=!p.til; tr.classList.toggle('til',p.til);
   const cb=tr.querySelector('input[type=checkbox]'); if(cb) cb.checked=p.til;
-  updKPIs(); updBtn();
+  updKPIs(); updBtn(); guardarTildados();
 }
 function tildarTodos(v){
   filtered().forEach(p=>{ const g=ALL.find(x=>x.id===p.id); if(g) g.til=v; });
-  render(); updKPIs(); updBtn();
+  render(); updKPIs(); updBtn(); guardarTildados();
 }
 function asgCh(id,ch,sel){
   const p=ALL.find(x=>x.id===id); if(!p) return;
@@ -1455,6 +1474,7 @@ function toggleRemito(id, el){
     p.remito = 'completo';
     p.estado = 'entregado';
     p.til = false;
+    guardarTildados();
     escribirRemito(p, 'completo');
     const tr = el.closest('tr');
     if(tr){ tr.style.transition='opacity .3s'; tr.style.opacity='0'; }
@@ -1479,7 +1499,7 @@ function getTrClass(p){
   ].filter(Boolean).join(' ');
 }
 
-function renderAll(){ render(); renderEntregados(); updKPIs(); updBtn(); }
+function renderAll(){ restaurarTildados(); render(); renderEntregados(); updKPIs(); updBtn(); }
 
 function switchEpTab(tab){
   epTabActivo = tab;
