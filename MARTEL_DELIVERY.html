@@ -1354,7 +1354,7 @@ function restaurarTildados(){
     const raw = localStorage.getItem('martel_tildados');
     if(!raw) return;
     const datos = JSON.parse(raw);
-    const limite = Date.now() - 48*60*60*1000;
+    const limite = Date.now() - 7*24*60*60*1000;
     const vigentes = datos.filter(d=>d.ts>=limite);
     vigentes.forEach(function(d){
       const p = ALL.find(x=>x.cliente===d.cliente && x.factura===d.factura && x.estado!=='entregado');
