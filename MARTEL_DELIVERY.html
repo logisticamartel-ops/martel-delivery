@@ -1761,49 +1761,24 @@ function cerrarMapaFull(){
   document.getElementById('fullmapWrap').style.display='none';
 }
 
-async function filtrarMapaFull(){
+function _dibujarMarcadores(ped){
   if(!fullMarkersLayer) return;
-  
-  // Mostrar loading
-  document.getElementById('fmStatus').textContent = 'Geocodificando direcciones...';
-  document.getElementById('fmStatus').style.display = 'inline';
-  
-  const fc = document.getElementById('fmChofer').value;
-  const fs = document.getElementById('fmSuc').value;
-  const fe = document.getElementById('fmEstado').value;
-  const pedidosFiltrados = ALL.filter(function(p){
-    if(fc && p.chofer!==fc) return false;
-    if(fs && p.sucursal!==fs) return false;
-    if(fe && p.estado!==fe) return false;
-    return true;
-  });
-  
-  // Geocodificar los que no tienen coords
-  await geocodificarTodos(pedidosFiltrados);
-  
-  document.getElementById('fmStatus').style.display = 'none';
-  
   fullMarkersLayer.clearLayers();
-  const ped = pedidosFiltrados;
   const filtroChofer = document.getElementById('fmChofer').value;
   const chs = new Set();
   ped.forEach(function(p){
-    // No mostrar entregados en el mapa
     if(p.estado === 'entregado') return;
     const coord = getCoord(p);
     const col = p.chofer?(CCOLORS[p.chofer]||'#94a3b8'):'#475569';
     if(p.chofer) chs.add(p.chofer);
     const estadoIcon = p.estado==='entregado'?'✓ ':p.estado==='descargado'?'↓ ':'';
-    
-    // Si hay filtro de chofer, apagar los que no son del chofer seleccionado
     const esFoco = !filtroChofer || p.chofer === filtroChofer;
     const size = esFoco ? 16 : 8;
     const opacity = esFoco ? 1 : 0.15;
     const shadow = esFoco ? '0 0 10px '+col+', 0 0 4px rgba(0,0,0,.8)' : 'none';
     const border = esFoco ? '2px solid white' : '1px solid rgba(255,255,255,.2)';
-    
     const marker = L.marker(coord, {
-      draggable: esFoco, // solo arrastrable si está en foco
+      draggable: esFoco,
       zIndexOffset: esFoco ? 1000 : 0,
       icon: L.divIcon({
         className: '',
@@ -1812,7 +1787,6 @@ async function filtrarMapaFull(){
       })
     });
     marker.bindPopup('<div style="font-family:sans-serif;min-width:200px"><b style="font-size:13px">'+p.nombre+'</b><br><small style="color:#64748b">'+p.domicilio+'</small><br><br><b>Factura:</b> '+p.factura+'<br><b>Sucursal:</b> '+SLBL[p.sucursal]+'<br><b>Chofer:</b> '+(p.chofer||'Sin asignar')+'<br><b>Estado:</b> '+estadoIcon+p.estado+'<br><b>Fecha:</b> '+p.fecha+'<br><br><small style="color:#22c55e">📌 Podés arrastrar este punto para ajustar la ubicación</small></div>');
-    // Guardar posición al arrastrar
     marker.on('dragend', function(e){
       const pos = e.target.getLatLng();
       p._lat = pos.lat;
@@ -1842,6 +1816,44 @@ async function filtrarMapaFull(){
       filtrarMapaFull();
     });
   });
+}
+
+async function filtrarMapaFull(){
+  if(!fullMarkersLayer) return;
+  const fc = document.getElementById('fmChofer').value;
+  const fs = document.getElementById('fmSuc').value;
+  const fe = document.getElementById('fmEstado').value;
+  const ped = ALL.filter(function(p){
+    if(fc && p.chofer!==fc) return false;
+    if(fs && p.sucursal!==fs) return false;
+    if(fe && p.estado!==fe) return false;
+    return true;
+  });
+
+  // Paso 1: aplicar cache sin red para tener coords al instante
+  ped.forEach(function(p){
+    if(!p._lat){
+      const key = p.domicilio.toLowerCase().trim();
+      if(geoCache[key]){ p._lat=geoCache[key][0]; p._lng=geoCache[key][1]; }
+    }
+  });
+
+  // Paso 2: mostrar mapa de inmediato (los sin cache usan fallback por sucursal)
+  _dibujarMarcadores(ped);
+
+  // Paso 3: geocodificar en background los que no tienen coords reales aún
+  const sinGeo = ped.filter(p=>!p._lat && p.estado!=='entregado');
+  if(sinGeo.length){
+    const st = document.getElementById('fmStatus');
+    st.textContent = 'Refinando '+sinGeo.length+' ubicaciones...';
+    st.style.display = 'inline';
+    for(const p of sinGeo){
+      await geocodificar(p);
+      await new Promise(r=>setTimeout(r,GEO_DELAY_MS));
+    }
+    st.style.display = 'none';
+    _dibujarMarcadores(ped);
+  }
 }
 
 
