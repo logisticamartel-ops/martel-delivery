@@ -869,7 +869,7 @@ const DEMO=[
 ];
 
 // ── API / GAS ─────────────────────────────────────────────────
-const GAS_URL ='https://script.google.com/macros/s/AKfycbzGwUAyrsbpi5qDrMG_mkf9wpEvHl3PvIvVZfJ1u-OKasxe4FeWcyOaYnfNAzXi19jv/exec';
+const GAS_URL ='https://script.google.com/macros/s/AKfycbwIXmbtqe9Owlrg7QdTggvhRn0bUkD-WfpijoxG8mCR6YU-simIxgodbjycvC26jhDr/exec';
 
 function _ejecutarSync(btnId, labelBusy, labelOk, onOk, silentError){
   const btn = document.getElementById(btnId);
@@ -2182,6 +2182,8 @@ function guardarPedido(){
   if(_editandoId !== null){
     const p = ALL.find(x=>x.id===_editandoId);
     if(p){
+      const clienteOrig = p.cliente;
+      const facturaOrig = p.factura;
       const domAnterior = p.domicilio;
       p.cliente = cliente;
       p.nombre = nombre;
@@ -2191,10 +2193,20 @@ function guardarPedido(){
       p.observaciones = obs;
       p.fecha = fechaDisplay;
       if(p.domicilio !== domAnterior){ p._lat=null; p._lng=null; }
+      const params = new URLSearchParams({
+        action: 'update_pedido',
+        sucursal: p.sucursal,
+        cliente: clienteOrig,
+        factura_orig: facturaOrig,
+        nombre: p.nombre,
+        factura: p.factura,
+        domicilio: p.domicilio
+      });
+      const img = new Image(); img.src = GAS_URL + '?' + params.toString();
     }
     renderAll();
     cerrarCarga();
-    showToast('✓ Pedido modificado');
+    showToast('✓ Pedido modificado y guardado en Drive');
     return;
   }
 
