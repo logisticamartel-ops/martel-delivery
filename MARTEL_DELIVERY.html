@@ -1971,7 +1971,7 @@ function renderReporte(){
   // Calcular métricas
   const total = ped.length;
   const pendientes = ped.filter(p=>p.estado==='pendiente').length;
-  const descargados = ped.filter(p=>p.estado==='descargado').length;
+  const descargados = ped.filter(p=>p.remito==='descargado').length;
   const entregados = ped.filter(p=>p.estado==='entregado').length;
   const sinAsignar = ped.filter(p=>!p.chofer).length;
   const pctComp = total>0 ? Math.round((entregados/total)*100) : 0;
@@ -1984,7 +1984,9 @@ function renderReporte(){
     const k = p.chofer || 'sin_asignar';
     if(!porChofer[k]) porChofer[k] = {total:0,pendiente:0,descargado:0,entregado:0,sucursales:new Set()};
     porChofer[k].total++;
-    porChofer[k][p.estado]++;
+    if(p.estado==='entregado') porChofer[k].entregado++;
+    else if(p.remito==='descargado') porChofer[k].descargado++;
+    else porChofer[k].pendiente++;
     porChofer[k].sucursales.add(SLBL[p.sucursal]||p.sucursal);
   });
   
@@ -1994,7 +1996,9 @@ function renderReporte(){
   ped.forEach(p => {
     if(!porSuc[p.sucursal]) porSuc[p.sucursal] = {total:0,pendiente:0,descargado:0,entregado:0};
     porSuc[p.sucursal].total++;
-    porSuc[p.sucursal][p.estado]++;
+    if(p.estado==='entregado') porSuc[p.sucursal].entregado++;
+    else if(p.remito==='descargado') porSuc[p.sucursal].descargado++;
+    else porSuc[p.sucursal].pendiente++;
   });
   
   const maxChofer = Math.max(...Object.values(porChofer).map(c=>c.total));
