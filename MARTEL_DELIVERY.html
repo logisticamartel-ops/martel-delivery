@@ -1067,7 +1067,6 @@ async function geocodificarTodos(pedidos){
 
 async function resolverMapsLinks(){
   const pendientes = ALL.filter(function(p){
-    if(p._lat) return false;
     const texto = (p.domicilio||'') + ' ' + (p.observaciones||'');
     return MAPS_RE.test(texto);
   });
