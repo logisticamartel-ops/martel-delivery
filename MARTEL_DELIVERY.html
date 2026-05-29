@@ -870,7 +870,7 @@ const DEMO=[
 
 // ── API / GAS ─────────────────────────────────────────────────
 const GAS_URL ='https://script.google.com/macros/s/AKfycbw7H5WgXqG3cQcGPk1L2imq30pC75SnycNfSOt8_5r07aXoUbNNJPqwmHjeaSeFPRtm/exec';
-const MAPS_RE = /https?:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps|maps\.google\.com|www\.google\.com\/maps)[^\s,)"]*/i;
+const MAPS_RE = /https?:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps|maps\.google\.com|www\.google\.com\/maps)[^\s]*/i;
 
 function _ejecutarSync(btnId, labelBusy, labelOk, onOk, silentError){
   const btn = document.getElementById(btnId);
@@ -1075,8 +1075,18 @@ async function resolverMapsLinks(){
     const texto = (p.domicilio||'') + ' ' + (p.observaciones||'');
     const match = texto.match(MAPS_RE);
     if(!match) continue;
+    const mapUrl = match[0];
+    // Intentar extraer coords directamente de la URL (links largos ya las tienen)
+    const coordMatch = mapUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if(coordMatch){
+      p._lat = parseFloat(coordMatch[1]); p._lng = parseFloat(coordMatch[2]);
+      geoCache[p.domicilio.toLowerCase().trim()] = [p._lat, p._lng];
+      try{ localStorage.setItem('martel_geo_cache', JSON.stringify(geoCache)); }catch(e){}
+      continue;
+    }
+    // Para links cortos (maps.app.goo.gl) usar GAS para resolver el redirect
     try{
-      const res = await fetch(GAS_URL+'?action=resolve_maps&url='+encodeURIComponent(match[0]), {cache:'no-store'});
+      const res = await fetch(GAS_URL+'?action=resolve_maps&url='+encodeURIComponent(mapUrl), {cache:'no-store'});
       const data = await res.json();
       if(data.ok && data.lat && data.lng){
         p._lat = data.lat; p._lng = data.lng;
