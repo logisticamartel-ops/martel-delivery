@@ -959,10 +959,13 @@ function procesarDatosGAS(filas, sucursal){
     const remitoFinal = existing ? existing.remito : (esEntregado ? (remitoRaw||'completo') : remitoRaw);
     const tilFinal = existing ? existing.til : false;
     const estadoFinal = esEntregado ? 'entregado' : (existing ? existing.estado : 'pendiente');
+    const tsSheets = f.length > 8 ? String(f[8]||'').trim() : '';
+    const cargadoFinal = tsSheets || (existing ? existing._cargadoEn : null) || null;
     nuevos.push({id:uid++,cliente:cliStr,nombre:nombre,
       factura:facStr,domicilio:domicilio,fecha:fechaDisplay,
       sucursal:sucursal,chofer:choferFinal,
-      estado:estadoFinal,remito:remitoFinal,til:tilFinal,_lat:null,_lng:null});
+      estado:estadoFinal,remito:remitoFinal,til:tilFinal,_lat:null,_lng:null,
+      _cargadoEn:cargadoFinal});
   }
   ALL=ALL.concat(nuevos);
   return nuevos.length;
@@ -2323,7 +2326,8 @@ function gasSavePedidoNube(p, onDone) {
     factura:       p.factura       || '',
     domicilio:     p.direccion     || p.domicilio || '',
     observaciones: p.observaciones || '',
-    fecha:         p.fecha         || ''
+    fecha:         p.fecha         || '',
+    horacarga:     p._cargadoEn    || ''
   });
   sc.src = GAS_URL + '?' + params.toString();
   document.head.appendChild(sc);
