@@ -869,7 +869,8 @@ const DEMO=[
 ];
 
 // ── API / GAS ─────────────────────────────────────────────────
-const GAS_URL ='https://script.google.com/macros/s/AKfycbwIXmbtqe9Owlrg7QdTggvhRn0bUkD-WfpijoxG8mCR6YU-simIxgodbjycvC26jhDr/exec';
+const GAS_URL ='https://script.google.com/macros/s/AKfycbyR-5UL466gtnl9pYRKfn2-iuoOrGJQQpWzKl8w7g1Z5CBfUmUcq704D8n04rO18u01/exec';
+const MAPS_RE = /https?:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps|maps\.google\.com|www\.google\.com\/maps)[^\s,)"]*/i;
 
 function _ejecutarSync(btnId, labelBusy, labelOk, onOk, silentError){
   const btn = document.getElementById(btnId);
@@ -880,6 +881,7 @@ function _ejecutarSync(btnId, labelBusy, labelOk, onOk, silentError){
     renderAll();
     showToast(labelOk+total+' pedidos');
     if(btn){ btn.textContent=labelDefault; btn.disabled=false; }
+    resolverMapsLinks();
   }, function(){
     if(btn){ btn.textContent=labelDefault; btn.disabled=false; }
     if(!silentError) showToast('⚠ Sin respuesta del servidor');
@@ -1060,6 +1062,30 @@ async function geocodificarTodos(pedidos){
   for(const p of sinGeo){
     await geocodificar(p);
     await new Promise(r=>setTimeout(r,GEO_DELAY_MS));
+  }
+}
+
+async function resolverMapsLinks(){
+  const pendientes = ALL.filter(function(p){
+    if(p._lat) return false;
+    const texto = (p.domicilio||'') + ' ' + (p.observaciones||'');
+    return MAPS_RE.test(texto);
+  });
+  if(!pendientes.length) return;
+  for(const p of pendientes){
+    const texto = (p.domicilio||'') + ' ' + (p.observaciones||'');
+    const match = texto.match(MAPS_RE);
+    if(!match) continue;
+    try{
+      const res = await fetch(GAS_URL+'?action=resolve_maps&url='+encodeURIComponent(match[0]), {cache:'no-store'});
+      const data = await res.json();
+      if(data.ok && data.lat && data.lng){
+        p._lat = data.lat; p._lng = data.lng;
+        geoCache[p.domicilio.toLowerCase().trim()] = [data.lat, data.lng];
+        try{ localStorage.setItem('martel_geo_cache', JSON.stringify(geoCache)); }catch(e){}
+      }
+    }catch(e){}
+    await new Promise(r=>setTimeout(r,500));
   }
 }
 
@@ -1312,7 +1338,7 @@ function buildRow(p){
     <td class="mn">${p.cliente||'—'}</td>
     <td class="nb" title="${p.nombre}">${p.nombre||'—'}</td>
     <td class="mn">${p.factura||'—'}</td>
-    <td class="dm" title="${p.domicilio}">${p.domicilio||'—'}</td>
+    <td class="dm" title="${p.domicilio}">${p.domicilio||'—'}${(()=>{const m=(p.domicilio||'').match(MAPS_RE)||(p.observaciones||'').match(MAPS_RE);return m?` <a href="${m[0]}" target="_blank" onclick="event.stopPropagation()" title="Abrir en Google Maps" style="color:var(--green);text-decoration:none;font-size:11px">📍</a>`:'';})()}</td>
     <td style="font-size:11px;color:var(--muted);white-space:nowrap">${p.fecha||'—'}</td>
     <td style="font-size:11px;color:var(--cyan)">${SLBL[p.sucursal]||p.sucursal}</td>
     <td onclick="event.stopPropagation()">
