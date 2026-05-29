@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta http-equiv="refresh" content="0;url=MARTEL_DELIVERY.html"/>
+<title>Martel Delivery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="styles.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+</head>
+<body>
+<div id="driverLoginModal" class="driver-modal">
+  <div class="driver-modal-content">
+    <h2>Bienvenido a LogixOps</h2>
+    <p>Selecciona tu chofer para ver tus pedidos del día</p>
+    <div class="driver-list" id="driverList"></div>
+  </div>
+</div>
+<div class="app-shell" id="appShell" style="display:grid">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">LX</div>
+      <div>
+        <strong>LogixOps</strong>
+        <span>Control Tower</span>
+      </div>
+    </div>
+
+    <nav class="nav-list" aria-label="Secciones">
+      <button class="nav-item active" type="button" data-target="dashboardTop">Panel</button>
+      <button class="nav-item" type="button" data-target="routePanel">Rutas</button>
+      <button class="nav-item" type="button" data-target="fleetPanel">Flota</button>
+      <button class="nav-item" type="button" data-target="inventoryPanel">Inventario</button>
+      <button class="nav-item" type="button" data-target="alertsPanel">Alertas</button>
+    </nav>
+
+    <div style="padding:0 10px 10px;margin-top:auto">
+      <div class="clock" id="clock">--:--:--</div>
+      <div class="clock-date" id="clockDate"></div>
+      <div class="side-info">
+        <span class="eyebrow">Turno actual</span>
+        <strong id="shiftRange">06:00 – 14:00</strong>
+        <p>Base Norte opera con capacidad alta. Dos muelles en espera.</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="dashboard" id="dashboardTop">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div>
+        <span class="eyebrow" id="topbarDate">Salta</span>
+        <h1>Dashboard de Logística</h1>
+      </div>
+      <div class="actions">
+        <span class="driver-badge">Selecciona chofer</span>
+        <label class="select-wrap">
+          <span>Región</span>
+          <select id="regionFilter">
+            <option value="all">Todas</option>
+            <option value="salta" selected>Salta</option>
+          </select>
+        </label>
+        <label class="select-wrap">
+          <span>Período</span>
+          <select id="periodFilter">
+            <option value="today">Hoy</option>
+            <option value="week">Semana</option>
+            <option value="month">Mes</option>
+          </select>
+        </label>
+        <button class="text-button" id="loadFileBtn" type="button">Cargar planilla</button>
+        <input type="file" id="fileInput" accept=".csv,.json" style="display:none" />
+      </div>
+    </header>
+
+    <!-- KPIs -->
+    <section class="kpi-grid" aria-label="Indicadores principales">
+      <article class="metric-card">
+        <span>Entregas a tiempo</span>
+        <strong id="onTimeMetric">94.8%</strong>
+        <p class="metric-note">Porcentaje estimado de envíos que llegan dentro del plazo.</p>
+        <small class="positive" id="onTimeSubMetric">↑ +2.1 pts</small>
+      </article>
+      <article class="metric-card">
+        <span>Pedidos en ruta</span>
+        <strong id="inTransitMetric">5</strong>
+        <p class="metric-note">Número de pedidos actualmente en tránsito o monitoreados.</p>
+        <small class="neutral" id="criticalMetric">—</small>
+      </article>
+      <article class="metric-card">
+        <span>Uso de flota</span>
+        <strong id="fleetMetric">81%</strong>
+        <p class="metric-note">Porcentaje de vehículos en uso respecto al total de la flota.</p>
+        <small class="positive" id="fleetSubMetric">↑ +6 unidades</small>
+      </article>
+      <article class="metric-card">
+        <span>Costo por km</span>
+        <strong id="costMetric">$1.42</strong>
+        <p class="metric-note">Costo promedio por kilómetro en la operación.</p>
+        <small class="negative">↑ +3.4%</small>
+      </article>
+    </section>
+
+    <!-- CONTENT -->
+    <div class="content-scroll">
+      <div class="layout-grid">
+
+        <!-- ORDERS TABLE -->
+        <article class="panel wide-panel" id="ordersPanel">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">Planilla</span>
+              <h2>Pedidos cargados</h2>
+            </div>
+            <span class="badge">Vista general</span>
+          </div>
+          <div class="orders-table-container">
+            <table class="orders-table">
+              <thead>
+                <tr>
+                  <th>Pedido</th>
+                  <th>Destino</th>
+                  <th>Chofer</th>
+                  <th>Vehículo</th>
+                  <th>Sucursal</th>
+                  <th>Zona</th>
+                  <th>ETA</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTableBody"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <!-- ROUTE MAP -->
+        <article class="panel route-panel" id="routePanel">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">Red de distribución</span>
+              <h2>Rutas activas</h2>
+            </div>
+            <button id="optimizeBtn" class="icon-button" type="button" title="Optimizar rutas" aria-label="Optimizar rutas">↻</button>
+          </div>
+          <div class="branch-tabs" id="branchTabs"></div>
+          <div class="route-map">
+            <div id="deliveryMap" class="map-view"></div>
+          </div>
+          <div class="route-legend">
+            <span class="legend-item"><span class="legend-dot" style="background:#ff4757"></span>Riesgo Alto</span>
+            <span class="legend-item"><span class="legend-dot" style="background:#f5a623"></span>Riesgo Medio</span>
+          </div>
+        </article>
+
+        <!-- DELIVERY CHART -->
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow" id="deliveryPeriodLabel">SLA</span>
+              <h2>Entregas por hora</h2>
+            </div>
+            <span id="slaBadge" class="badge good">Estable</span>
+          </div>
+          <div id="deliveryChart" class="bar-chart"></div>
+        </article>
+
+        <!-- FLEET -->
+        <article class="panel" id="fleetPanel">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">Operaciones</span>
+              <h2>Flota</h2>
+            </div>
+            <span class="badge" id="fleetBadge">—</span>
+          </div>
+          <div class="fleet-list" id="fleetList"></div>
+        </article>
+
+        <!-- INVENTORY -->
+        <article class="panel" id="inventoryPanel">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">Almacén</span>
+              <h2>Inventario crítico</h2>
+            </div>
+            <button class="text-button" id="exportBtn" type="button">Exportar</button>
+          </div>
+          <table>
+            <thead>
+              <tr><th>SKU</th><th>Stock</th><th>Demanda</th><th>Estado</th></tr>
+            </thead>
+            <tbody id="inventoryTable"></tbody>
+          </table>
+        </article>
+
+        <!-- ORDERS AT RISK -->
+        <article class="panel wide-panel" id="alertsPanel">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">Excepciones</span>
+              <h2>Pedidos con riesgo</h2>
+            </div>
+            <div class="segmented" id="riskFilter">
+              <button class="active" type="button" data-risk="all">Todos</button>
+              <button type="button" data-risk="high">Alto</button>
+              <button type="button" data-risk="medium">Medio</button>
+            </div>
+          </div>
+          <div class="orders" id="ordersList"></div>
+        </article>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div id="toastContainer" class="toast-container"></div>
+<script src="data.js"></script>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
