@@ -533,7 +533,7 @@ tbody tr.entregado:hover{opacity:.65}
                 <small>Archivo → Descargar → .xlsx desde Google Sheets</small>
               </div>
               <table id="tbl" style="display:none">
-                <thead><tr><th>✓</th><th>Cliente</th><th>Nombre</th><th>Factura</th><th>Domicilio</th><th>Fecha</th><th>Sucursal</th><th>Chofer</th><th>Estado</th><th>Remito</th><th></th></tr></thead>
+                <thead><tr><th>✓</th><th>Cliente</th><th>Nombre</th><th>Factura</th><th>Domicilio</th><th>Fecha</th><th>Sucursal</th><th class="admin-only" title="Fecha y hora de carga en el dashboard">Cargado</th><th>Chofer</th><th>Estado</th><th>Remito</th><th></th></tr></thead>
                 <tbody id="tbody"></tbody>
               </table>
             </div>
@@ -1324,7 +1324,7 @@ function render(){
     const zonaOrden = Object.keys(ZONAS);
     zonaOrden.forEach(zona=>{
       if(!grupos[zona] || grupos[zona].length===0) return;
-      rows += `<tr><td colspan="10" class="zona-header">📍 ${zona} — ${grupos[zona].length} pedido${grupos[zona].length>1?'s':''}</td></tr>`;
+      rows += `<tr><td colspan="20" class="zona-header">📍 ${zona} — ${grupos[zona].length} pedido${grupos[zona].length>1?'s':''}</td></tr>`;
       grupos[zona].forEach(p=>{ rows += buildRow(p); });
     });
   } else {
@@ -1333,7 +1333,7 @@ function render(){
     const entregados = mostrarEntregados ? ped.filter(p=>p.estado==='entregado') : [];
     pendientes.forEach(p=>{ rows += buildRow(p); });
     if(entregados.length>0){
-      rows += `<tr><td colspan="10" class="zona-header" style="color:var(--green);border-left:3px solid var(--green)">✓ Completados — ${entregados.length}</td></tr>`;
+      rows += `<tr><td colspan="20" class="zona-header" style="color:var(--green);border-left:3px solid var(--green)">✓ Completados — ${entregados.length}</td></tr>`;
       entregados.forEach(p=>{ rows += buildRow(p); });
     }
   }
@@ -1350,6 +1350,7 @@ function buildRow(p){
     <td class="dm" title="${p.domicilio}">${p.domicilio||'—'}${(()=>{const m=(p.domicilio||'').match(MAPS_RE)||(p.observaciones||'').match(MAPS_RE);return m?` <a href="${m[0]}" target="_blank" onclick="event.stopPropagation()" title="Abrir en Google Maps" style="color:var(--green);text-decoration:none;font-size:11px">📍</a>`:'';})()}</td>
     <td style="font-size:11px;color:var(--muted);white-space:nowrap">${p.fecha||'—'}</td>
     <td style="font-size:11px;color:var(--cyan)">${SLBL[p.sucursal]||p.sucursal}</td>
+    <td class="admin-only" style="font-family:var(--mono);font-size:10px;white-space:nowrap;color:${p._cargadoEn?(new Date(p._cargadoEn).getHours()>=17?'var(--red)':'var(--green)'):'var(--border2)'}">${fmtTs(p._cargadoEn)}</td>
     <td onclick="event.stopPropagation()">
       ${sesionRol
         ? `<span style="font-size:11px;color:${p.chofer?'var(--cyan)':'var(--muted)'};font-family:var(--mono)">${p.chofer?p.chofer.charAt(0).toUpperCase()+p.chofer.slice(1):'—'}</span>`
@@ -1382,6 +1383,25 @@ function eliminarPedido(id){
   showToast('Pedido eliminado');
 }
 
+
+// ── TIMESTAMPS DE CARGA ──────────────────────────────────────
+const _loadTs = (function(){ try{ return JSON.parse(localStorage.getItem('martel_load_ts')||'{}'); }catch(e){ return {}; } })();
+function _tsKey(p){ return p.sucursal+':'+p.factura; }
+function guardarTimestamp(p){
+  if(!p._cargadoEn) return;
+  _loadTs[_tsKey(p)] = p._cargadoEn;
+  try{ localStorage.setItem('martel_load_ts', JSON.stringify(_loadTs)); }catch(e){}
+}
+function restaurarTimestamps(){
+  ALL.forEach(function(p){
+    if(!p._cargadoEn){ const v=_loadTs[_tsKey(p)]; if(v) p._cargadoEn=v; }
+  });
+}
+function fmtTs(iso){
+  if(!iso) return '—';
+  const d=new Date(iso);
+  return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
 
 function guardarTildados(){
   const ahora = Date.now();
@@ -1538,7 +1558,7 @@ function getTrClass(p){
   ].filter(Boolean).join(' ');
 }
 
-function renderAll(){ restaurarTildados(); render(); renderEntregados(); updKPIs(); updBtn(); }
+function renderAll(){ restaurarTimestamps(); restaurarTildados(); render(); renderEntregados(); updKPIs(); updBtn(); }
 
 function switchEpTab(tab){
   epTabActivo = tab;
@@ -2264,10 +2284,12 @@ function guardarPedido(){
     estado: estado,
     remito: '',
     til: false,
-    _lat: null, _lng: null
+    _lat: null, _lng: null,
+    _cargadoEn: new Date().toISOString()
   };
 
   ALL.push(nuevo);
+  guardarTimestamp(nuevo);
   renderAll();
   cerrarCarga();
   showToast('💾 Guardando en la nube...');
@@ -2466,10 +2488,29 @@ function etSetManualToken() {
   } catch(e) {}
 })();
 
+// ── COLUMNAS REDIMENSIONABLES ────────────────────────────────
+function initResizableCols(){
+  document.querySelectorAll('#tbl thead th').forEach(function(th){
+    const h = document.createElement('span');
+    h.style.cssText = 'position:absolute;right:0;top:0;bottom:0;width:5px;cursor:col-resize;user-select:none;z-index:2';
+    th.style.position = 'relative';
+    th.appendChild(h);
+    h.addEventListener('mousedown', function(e){
+      const startX = e.pageX, startW = th.offsetWidth;
+      function mv(e){ th.style.minWidth = Math.max(30, startW + e.pageX - startX)+'px'; }
+      function up(){ document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up); }
+      document.addEventListener('mousemove',mv);
+      document.addEventListener('mouseup',up);
+      e.preventDefault(); e.stopPropagation();
+    });
+  });
+}
+
 // ── INIT ──────────────────────────────────────────────────────
 ALL=DEMO.map(d=>({...d}));
 renderAll();
 iniciarEasyTrack();
+initResizableCols();
 
 // ── AUTO-SYNC ─────────────────────────────────────────────────
 (function(){
