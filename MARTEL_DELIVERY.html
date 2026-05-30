@@ -1734,14 +1734,14 @@ function imprimirSel(){
   CHOFERES.forEach(ch=>{
     if(!grupos[ch]) return;
     html+=`<div class="pb"><div class="pn">🚛 ${ch.toUpperCase()} — ${grupos[ch].length} pedido${grupos[ch].length>1?'s':''}</div>
-    <table class="ptbl"><thead><tr><th>Cliente</th><th>Nombre</th><th>Factura</th><th>Domicilio</th><th>Sucursal</th><th>Fecha</th><th style="width:200px">Productos</th></tr></thead><tbody>
-    ${grupos[ch].map(p=>`<tr><td>${p.cliente}</td><td><b>${p.nombre}</b></td><td>${p.factura}</td><td>${p.domicilio}</td><td>${SLBL[p.sucursal]}</td><td>${p.fecha}</td><td style="border-bottom:1px solid #ccc">&nbsp;</td></tr>`).join('')}
+    <table class="ptbl"><thead><tr><th>Cliente</th><th>Nombre</th><th>Factura</th><th>Domicilio</th><th>Suc.</th><th>Fecha</th><th style="width:150px">Productos</th><th style="width:60px">Chofer</th></tr></thead><tbody>
+    ${grupos[ch].map(p=>`<tr><td>${p.cliente}</td><td><b>${p.nombre}</b></td><td>${p.factura}</td><td style="max-width:180px;overflow:hidden">${p.domicilio.replace(/https?:\/\/\S+/g,'').trim()}</td><td>${SLBL[p.sucursal]}</td><td>${p.fecha}</td><td style="border-bottom:1px solid #ccc">&nbsp;</td><td style="border-bottom:1px solid #ccc">&nbsp;</td></tr>`).join('')}
     </tbody></table></div>`;
   });
   if(grupos['__sin__']){
     html+=`<div class="pb noasig"><div class="pn">⚠ SIN ASIGNAR — ${grupos['__sin__'].length} pedido${grupos['__sin__'].length>1?'s':''}</div>
-    <table class="ptbl"><thead><tr><th>Cliente</th><th>Nombre</th><th>Factura</th><th>Domicilio</th><th>Sucursal</th><th>Fecha</th><th style="width:200px">Productos</th></tr></thead><tbody>
-    ${grupos['__sin__'].map(p=>`<tr><td>${p.cliente}</td><td><b>${p.nombre}</b></td><td>${p.factura}</td><td>${p.domicilio}</td><td>${SLBL[p.sucursal]}</td><td>${p.fecha}</td><td style="border-bottom:1px solid #ccc">&nbsp;</td></tr>`).join('')}
+    <table class="ptbl"><thead><tr><th>Cliente</th><th>Nombre</th><th>Factura</th><th>Domicilio</th><th>Suc.</th><th>Fecha</th><th style="width:150px">Productos</th><th style="width:60px">Chofer</th></tr></thead><tbody>
+    ${grupos['__sin__'].map(p=>`<tr><td>${p.cliente}</td><td><b>${p.nombre}</b></td><td>${p.factura}</td><td style="max-width:180px;overflow:hidden">${p.domicilio.replace(/https?:\/\/\S+/g,'').trim()}</td><td>${SLBL[p.sucursal]}</td><td>${p.fecha}</td><td style="border-bottom:1px solid #ccc">&nbsp;</td><td style="border-bottom:1px solid #ccc">&nbsp;</td></tr>`).join('')}
     </tbody></table></div>`;
   }
   html+='</div>';
@@ -1764,8 +1764,9 @@ function imprimirSel(){
       .ptbl th{background:#f8fafc;padding:5px 8px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#475569;border-bottom:1px solid #cbd5e1}
       .ptbl td{padding:5px 8px;border-bottom:1px solid #e2e8f0;color:#1e293b}
       .ptbl tr:last-child td{border-bottom:none}
-      .ptbl th:last-child,.ptbl td:last-child{border-left:2px solid #cbd5e1;background:#fafafa}
-      .ptbl td:last-child{height:28px;border-bottom:1px solid #94a3b8}
+      .ptbl th:nth-last-child(-n+2),.ptbl td:nth-last-child(-n+2){border-left:2px solid #cbd5e1;background:#fafafa}
+      .ptbl td:nth-last-child(-n+2){height:28px;border-bottom:1px solid #94a3b8}
+      .ptbl td{word-break:break-word}
     </style></head><body>${html}</body></html>`);
   win.document.close();
   win.onload = function(){ win.print(); win.close(); };
