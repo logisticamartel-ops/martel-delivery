@@ -1793,7 +1793,7 @@ function imprimirSel(){
       .ptbl td{word-break:break-word}
     </style></head><body>${html}</body></html>`);
   win.document.close();
-  win.onload = function(){ win.print(); win.close(); };
+  win.onload = function(){ setTimeout(function(){ win.print(); win.close(); }, 600); };
 }
 
 
