@@ -2430,7 +2430,7 @@ async function verRecorrido(){
     if(puntos.length === 0){ st.textContent = 'Sin datos para esa fecha.'; st.style.color='var(--muted)'; return; }
     // Dibujar polyline
     etRecorridoLayer = L.layerGroup().addTo(fullMapInstance);
-    L.polyline(puntos, {color:'#f59e0b',weight:3,opacity:.85}).addTo(etRecorridoLayer);
+    L.polyline(puntos, {color:'#E30613',weight:4,opacity:.9}).addTo(etRecorridoLayer);
     // Punto inicio y fin
     L.circleMarker(puntos[0], {radius:6,color:'#22c55e',fillColor:'#22c55e',fillOpacity:1}).bindPopup('Inicio').addTo(etRecorridoLayer);
     L.circleMarker(puntos[puntos.length-1], {radius:6,color:'#ef4444',fillColor:'#ef4444',fillOpacity:1}).bindPopup('Fin').addTo(etRecorridoLayer);
