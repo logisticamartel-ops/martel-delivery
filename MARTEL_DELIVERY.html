@@ -717,13 +717,9 @@ tbody tr.entregado:hover{opacity:.65}
         <input type="text" id="cNombre" placeholder="Apellido y nombre o razón social"/>
       </div>
       <div class="field">
-        <label>Dirección de entrega *</label>
-        <input type="text" id="cDireccion" placeholder="Calle, número, barrio — solo dirección para el mapa"/>
-        <span class="hint">Solo la dirección. Sin teléfono ni instrucciones aquí.</span>
-      </div>
-      <div class="field">
-        <label>Observaciones</label>
-        <textarea id="cObservaciones" placeholder="Teléfono de contacto, horarios, si hay que retirar de sucursal, instrucciones especiales..."></textarea>
+        <label>Domicilio y observaciones *</label>
+        <textarea id="cDireccion" placeholder="Dirección, teléfono, horarios, instrucciones especiales..." style="min-height:80px"></textarea>
+        <input type="hidden" id="cObservaciones"/>
       </div>
 
     </div>
@@ -2226,11 +2222,7 @@ function editarPedido(id){
   document.getElementById('cCliente').value = p.cliente||'';
   document.getElementById('cFactura').value = p.factura||'';
   document.getElementById('cNombre').value = p.nombre||'';
-  // Separar dirección de observaciones si existe el split
-  const dir = p.direccion || p.domicilio || '';
-  const obs = p.observaciones || '';
-  document.getElementById('cDireccion').value = dir;
-  document.getElementById('cObservaciones').value = obs;
+  document.getElementById('cDireccion').value = p.domicilio || '';
   // Convertir fecha display (dd/mm/yy) a YYYY-MM-DD para el input date
   const fp = parseFecha(p.fecha);
   if(fp && !isNaN(fp)){
@@ -2257,7 +2249,7 @@ function guardarPedido(){
   if(!factura){ alert('El número de factura es obligatorio.'); document.getElementById('cFactura').focus(); return; }
   if(!dir){ alert('La dirección de entrega es obligatoria.'); document.getElementById('cDireccion').focus(); return; }
 
-  const obs = document.getElementById('cObservaciones').value.trim();
+  const obs = '';
   const chofer = '';
   const estado = 'pendiente';
   const cliente = document.getElementById('cCliente').value.trim();
@@ -2279,9 +2271,9 @@ function guardarPedido(){
       p.cliente = cliente;
       p.nombre = nombre;
       p.factura = factura;
-      p.domicilio = dir + (obs ? ' — ' + obs : '');
+      p.domicilio = dir;
       p.direccion = dir;
-      p.observaciones = obs;
+      p.observaciones = '';
       p.fecha = fechaDisplay;
       if(p.domicilio !== domAnterior){ p._lat=null; p._lng=null; }
       const params = new URLSearchParams({
@@ -2307,9 +2299,9 @@ function guardarPedido(){
     cliente: cliente,
     nombre: nombre,
     factura: factura,
-    domicilio: dir + (obs ? ' — ' + obs : ''),
+    domicilio: dir,
     direccion: dir,
-    observaciones: obs,
+    observaciones: '',
     fecha: fechaDisplay,
     sucursal: suc,
     chofer: chofer,
