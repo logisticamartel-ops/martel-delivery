@@ -609,6 +609,9 @@ tbody tr.entregado:hover{opacity:.65}
       </select>
       <span id="fmStatus" style="font-size:11px;color:var(--amber);font-family:var(--mono);display:none">Geocodificando...</span>
       <div class="fullmap-legend" id="fmLegend"></div>
+      <button class="btn btn-ghost" onclick="toggleHistoricoPanel()" title="Ver recorrido histórico" style="gap:5px">
+        🗺 Histórico
+      </button>
       <button class="btn btn-ghost" onclick="cerrarMapaFull()">
         <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         Volver
@@ -616,6 +619,27 @@ tbody tr.entregado:hover{opacity:.65}
     </div>
   </div>
   <div id="fullmap"></div>
+  <!-- Panel histórico -->
+  <div id="historicoPanel" style="display:none;position:absolute;top:60px;right:12px;z-index:1000;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r-lg);padding:16px;min-width:260px;box-shadow:0 4px 20px rgba(0,0,0,.5)">
+    <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em">📍 Recorrido histórico</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.08em">Vehículo</div>
+        <select id="histVehiculo" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--sans);font-size:12px;padding:5px 8px;border-radius:var(--r);outline:none">
+          <option value="">— seleccioná —</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.08em">Fecha</div>
+        <input type="date" id="histFecha" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;padding:5px 8px;border-radius:var(--r);outline:none;box-sizing:border-box"/>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:4px">
+        <button onclick="verRecorrido()" style="flex:2;background:var(--red);color:white;border:none;font-family:var(--sans);font-size:12px;font-weight:700;padding:7px;border-radius:var(--r);cursor:pointer">Ver recorrido</button>
+        <button onclick="limpiarRecorrido()" style="flex:1;background:var(--surface2);color:var(--muted);border:1px solid var(--border);font-family:var(--sans);font-size:12px;padding:7px;border-radius:var(--r);cursor:pointer">Limpiar</button>
+      </div>
+      <div id="histStatus" style="font-size:11px;color:var(--muted);text-align:center;min-height:16px"></div>
+    </div>
+  </div>
 </div>
 
 
@@ -2339,6 +2363,79 @@ function showToast(msg){
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'), 2500);
+}
+
+/* ── HISTÓRICO DE RECORRIDOS ────────────────────────────────── */
+let etRecorridoLayer = null;
+
+function toggleHistoricoPanel(){
+  const panel = document.getElementById('historicoPanel');
+  if(!panel) return;
+  const visible = panel.style.display !== 'none';
+  panel.style.display = visible ? 'none' : 'block';
+  if(!visible) _poblarVehiculos();
+}
+
+function _poblarVehiculos(){
+  const sel = document.getElementById('histVehiculo');
+  if(!sel || sel.options.length > 1) return;
+  // Usar las matrículas que ya conocemos del GPS
+  const mats = Object.keys(MATRICULAS).length > 0 ? Object.keys(MATRICULAS) :
+    (etLastPositions||[]).map(p=>p.domain_veh||p.domain).filter(Boolean);
+  mats.forEach(function(m){
+    const opt = document.createElement('option');
+    opt.value = m; opt.textContent = m + (MATRICULAS[m] ? ' — ' + MATRICULAS[m] : '');
+    sel.appendChild(opt);
+  });
+  // Fecha de hoy por defecto
+  const hoy = new Date().toISOString().split('T')[0];
+  document.getElementById('histFecha').value = hoy;
+}
+
+async function verRecorrido(){
+  const domain = document.getElementById('histVehiculo').value;
+  const fecha = document.getElementById('histFecha').value;
+  const st = document.getElementById('histStatus');
+  if(!domain){ st.textContent = 'Seleccioná un vehículo.'; st.style.color='var(--amber)'; return; }
+  if(!fecha){ st.textContent = 'Seleccioná una fecha.'; st.style.color='var(--amber)'; return; }
+  st.textContent = 'Consultando EasyTrack...'; st.style.color='var(--cyan)';
+  limpiarRecorrido();
+  try{
+    const res = await fetch('https://avlti.easytrack.com.ar/records-data/records/', {
+      method: 'POST',
+      headers: {'Authorization':'Bearer '+etToken,'Content-Type':'application/json','Accept':'application/json'},
+      body: JSON.stringify({find:'company',value:985,company_id:985,date_from:fecha,date_to:fecha,domain:domain})
+    });
+    if(!res.ok){ st.textContent = 'Error '+res.status+'. Renovar JWT.'; st.style.color='var(--red)'; return; }
+    const raw = await res.json();
+    // Normalizar respuesta — varios formatos posibles
+    let records = [];
+    if(Array.isArray(raw)) records = raw;
+    else if(raw.data && Array.isArray(raw.data)) records = raw.data;
+    else if(raw.records && Array.isArray(raw.records)) records = raw.records;
+    else if(raw.positions && Array.isArray(raw.positions)) records = raw.positions;
+    // Extraer coordenadas
+    const puntos = records
+      .map(function(r){ return [parseFloat(r.latitude||r.lat||r.y||0), parseFloat(r.longitude||r.lon||r.lng||r.x||0)]; })
+      .filter(function(c){ return c[0]!==0 && c[1]!==0 && !isNaN(c[0]) && !isNaN(c[1]); });
+    if(puntos.length === 0){ st.textContent = 'Sin datos para esa fecha.'; st.style.color='var(--muted)'; return; }
+    // Dibujar polyline
+    etRecorridoLayer = L.layerGroup().addTo(fullMapInstance);
+    L.polyline(puntos, {color:'#f59e0b',weight:3,opacity:.85}).addTo(etRecorridoLayer);
+    // Punto inicio y fin
+    L.circleMarker(puntos[0], {radius:6,color:'#22c55e',fillColor:'#22c55e',fillOpacity:1}).bindPopup('Inicio').addTo(etRecorridoLayer);
+    L.circleMarker(puntos[puntos.length-1], {radius:6,color:'#ef4444',fillColor:'#ef4444',fillOpacity:1}).bindPopup('Fin').addTo(etRecorridoLayer);
+    fullMapInstance.fitBounds(L.polyline(puntos).getBounds(), {padding:[30,30]});
+    st.textContent = puntos.length+' puntos GPS dibujados.'; st.style.color='var(--green)';
+  }catch(err){
+    st.textContent = 'Error: '+err.message; st.style.color='var(--red)';
+  }
+}
+
+function limpiarRecorrido(){
+  if(etRecorridoLayer){ etRecorridoLayer.remove(); etRecorridoLayer=null; }
+  const st = document.getElementById('histStatus');
+  if(st){ st.textContent=''; }
 }
 
 /* ── EASYTRACK GPS INTEGRATION ──────────────────────────────── */
