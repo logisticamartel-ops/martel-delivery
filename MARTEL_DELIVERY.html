@@ -2371,6 +2371,7 @@ function showToast(msg){
 
 /* ── HISTÓRICO DE RECORRIDOS ────────────────────────────────── */
 let etRecorridoLayer = null;
+const etVehicleIds = {}; // domain → vehicle_id, se llena con el GPS en tiempo real
 
 function toggleHistoricoPanel(){
   const panel = document.getElementById('historicoPanel');
@@ -2407,12 +2408,14 @@ async function verRecorrido(){
   st.textContent = 'Consultando EasyTrack...'; st.style.color='var(--cyan)';
   limpiarRecorrido();
   try{
-    const res = await fetch('https://avlti.easytrack.com.ar/records-data/records/', {
+    const vid = etVehicleIds[domain] || null;
+    if(!vid){ st.textContent = 'Activá el GPS primero (botón 🔑) para cargar los IDs.'; st.style.color='var(--amber)'; return; }
+    const res = await fetch('https://avlti.easytrack.com.ar/records-data/by-vehicle-id', {
       method: 'POST',
       headers: {'Authorization':'Bearer '+etToken,'Content-Type':'application/json','Accept':'application/json'},
-      body: JSON.stringify({find:'company',value:985,company_id:985,date_from:fecha,date_to:fecha,domain:domain})
+      body: JSON.stringify({company_id:985, date:fecha+' 00:00:00', date_end:fecha+' 23:59:59', domain_veh:domain, vehicle_id:vid})
     });
-    if(!res.ok){ st.textContent = 'Error '+res.status+'. Renovar JWT.'; st.style.color='var(--red)'; return; }
+    if(!res.ok){ st.textContent = 'Error '+res.status+(res.status===401?' — Renovar JWT.':'.'); st.style.color='var(--red)'; return; }
     const raw = await res.json();
     // Normalizar respuesta — varios formatos posibles
     let records = [];
@@ -2555,6 +2558,7 @@ async function etPoll() {
   try {
     const positions = await etPositionsDirect();
     etLastPositions = positions;
+    positions.forEach(function(p){ const d=p.domain_veh||p.domain; if(d && p.vehicle_id) etVehicleIds[d]=p.vehicle_id; });
     etUpdateMap(positions);
     _etBadge('on');
   } catch(err) {
