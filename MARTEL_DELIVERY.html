@@ -2379,10 +2379,12 @@ function toggleHistoricoPanel(){
 function _poblarVehiculos(){
   const sel = document.getElementById('histVehiculo');
   if(!sel || sel.options.length > 1) return;
-  // Usar las matrículas que ya conocemos del GPS
-  const mats = Object.keys(MATRICULAS).length > 0 ? Object.keys(MATRICULAS) :
-    (etLastPositions||[]).map(p=>p.domain_veh||p.domain).filter(Boolean);
-  mats.forEach(function(m){
+  // Combinar MATRICULAS + vehículos del GPS en tiempo real
+  const todos = new Set([
+    ...Object.keys(MATRICULAS),
+    ...(etLastPositions||[]).map(p=>p.domain_veh||p.domain).filter(Boolean)
+  ]);
+  [...todos].sort().forEach(function(m){
     const opt = document.createElement('option');
     opt.value = m; opt.textContent = m + (MATRICULAS[m] ? ' — ' + MATRICULAS[m] : '');
     sel.appendChild(opt);
