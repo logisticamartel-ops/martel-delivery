@@ -1449,7 +1449,7 @@ function buildRow(p){
 
 function enviarSeguimiento(id){
   const p = ALL.find(x=>x.id===id); if(!p) return;
-  const tel = _extractTel(p.domicilio); if(!tel) return;
+  const tel = _extractTel(p.domicilio, p.telObs, p.telefono); if(!tel) return;
   const link = SEGUIMIENTO_BASE+'?f='+encodeURIComponent(p.factura)+'&s='+p.sucursal;
   const choferNombre = CHOFERES_NOMBRES[p.chofer] || (p.chofer ? p.chofer.charAt(0).toUpperCase()+p.chofer.slice(1) : '');
   const telChofer = p.chofer ? (CHOFERES_TEL[p.chofer]||'') : '';
