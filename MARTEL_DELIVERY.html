@@ -793,9 +793,11 @@ const SEGUIMIENTO_BASE = 'https://logisticamartel-ops.github.io/martel-delivery/
 const _wspSent = (function(){ try{ return JSON.parse(localStorage.getItem('martel_wsp_sent')||'{}'); }catch(e){ return {}; } })();
 function _wspKey(p){ return p.sucursal+':'+p.factura; }
 function _extractTel(domicilio){
-  const m = (domicilio||'').match(/\b(3[678]\d{2}[\s.\-]?\d{3}[\s.\-]?\d{3,4})\b/);
+  const m = (domicilio||'').match(/\b(3\d{2}[\s.\-]?\d{3,4}[\s.\-]?\d{3,4})\b/);
   if(!m) return null;
-  return '549'+m[1].replace(/[\s.\-]/g,'');
+  const digits = m[1].replace(/[\s.\-]/g,'');
+  if(digits.length < 9) return null;
+  return '549'+digits;
 }
 // Zonas de Salta por palabras clave en domicilio
 const ZONAS = {
