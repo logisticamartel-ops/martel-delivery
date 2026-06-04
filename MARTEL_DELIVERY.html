@@ -721,9 +721,13 @@ tbody tr.entregado:hover{opacity:.65}
         <input type="text" id="cDireccion" placeholder="Calle, número, barrio"/>
       </div>
       <div class="field">
-        <label>Teléfono y observaciones</label>
-        <input type="text" id="cTelObs" placeholder="3876054501 LLAMAR ANTES DE IR"/>
-        <input type="hidden" id="cObservaciones"/>
+        <label>Teléfono</label>
+        <input type="text" id="cTelefono" placeholder="3876054501"/>
+      </div>
+      <div class="field">
+        <label>Observaciones</label>
+        <textarea id="cObservaciones" placeholder="Instrucciones, horarios, link de Maps..."></textarea>
+        <input type="hidden" id="cTelObs"/>
       </div>
 
     </div>
@@ -796,7 +800,12 @@ const SEGUIMIENTO_BASE = 'https://logisticamartel-ops.github.io/martel-delivery/
 // Tracking de mensajes enviados por WhatsApp
 const _wspSent = (function(){ try{ return JSON.parse(localStorage.getItem('martel_wsp_sent')||'{}'); }catch(e){ return {}; } })();
 function _wspKey(p){ return p.sucursal+':'+p.factura; }
-function _extractTel(domicilio, telObs){
+function _extractTel(domicilio, telObs, telefonoDirecto){
+  // Si hay campo teléfono dedicado, usarlo directo sin regex
+  if(telefonoDirecto){
+    const digits = telefonoDirecto.replace(/[\s.\-]/g,'');
+    if(digits.length >= 9) return '549'+digits;
+  }
   const texto = telObs || domicilio || '';
   const m = texto.match(/\b(\d{2,4}[\s.\-]?\d{3,4}[\s.\-]?\d{3,4})\b/);
   if(!m) return null;
@@ -918,7 +927,7 @@ const DEMO=[
 ];
 
 // ── API / GAS ─────────────────────────────────────────────────
-const GAS_URL ='https://script.google.com/macros/s/AKfycbzqv657RNQaeRM4-qARxLPDEToDu_9PvwEVVvGfjYuZx8n0f4whW5A8quj-mEFy9GLt/exec';
+const GAS_URL ='https://script.google.com/macros/s/AKfycbzvNc827WzVNjHQzQ3v6bNZeXQIiz3P7w_-eEF0-KYSfrjGNLnAYxQp3AJSifB84a6e/exec';
 const MAPS_RE = /https?:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps|maps\.google\.com|www\.google\.com\/maps)[^\s]*/i;
 
 function _ejecutarSync(btnId, labelBusy, labelOk, onOk, silentError){
@@ -1010,11 +1019,15 @@ function procesarDatosGAS(filas, sucursal){
     const estadoFinal = esEntregado ? 'entregado' : (existing ? existing.estado : 'pendiente');
     const tsSheets = f.length > 8 ? String(f[8]||'').trim() : '';
     const cargadoFinal = tsSheets || (existing ? existing._cargadoEn : null) || null;
+    const telefonoSheets = f.length > 9 ? String(f[9]||'').trim() : '';
+    const observSheets = f.length > 10 ? String(f[10]||'').trim() : '';
     nuevos.push({id:uid++,cliente:cliStr,nombre:nombre,
       factura:facStr,domicilio:domicilio,fecha:fechaDisplay,
       sucursal:sucursal,chofer:choferFinal,
       estado:estadoFinal,remito:remitoFinal,til:tilFinal,_lat:null,_lng:null,
-      _cargadoEn:cargadoFinal});
+      _cargadoEn:cargadoFinal,
+      telefono:telefonoSheets,observaciones:observSheets,
+      telObs:[telefonoSheets,observSheets].filter(Boolean).join(' — ')});
   }
   ALL=ALL.concat(nuevos);
   return nuevos.length;
@@ -1422,7 +1435,7 @@ function buildRow(p){
     <td onclick="event.stopPropagation()" style="text-align:center;width:75px;white-space:nowrap">
       ${(()=>{
         const sent = _wspSent[_wspKey(p)];
-        const tel = _extractTel(p.domicilio, p.telObs);
+        const tel = _extractTel(p.domicilio, p.telObs, p.telefono);
         const puedeEnviar = tel && p.remito==='descargado' && !sent;
         if(sent) return `<span title="Seguimiento enviado" style="color:var(--green);font-size:11px;padding:3px">✓</span>`;
         if(!tel || p.estado==='entregado') return `<span style="color:var(--border2);font-size:11px;padding:3px">📲</span>`;
@@ -2243,7 +2256,7 @@ function abrirCarga(sucParam){
   const hoy = new Date().toISOString().split('T')[0];
   document.getElementById('cFecha').value = hoy;
   // Limpiar campos
-  ['cCliente','cFactura','cNombre','cDireccion','cTelObs','cObservaciones'].forEach(id=>{
+  ['cCliente','cFactura','cNombre','cDireccion','cTelefono','cObservaciones','cTelObs'].forEach(id=>{
     document.getElementById(id).value='';
   });
 
@@ -2272,10 +2285,9 @@ function editarPedido(id){
   document.getElementById('cCliente').value = p.cliente||'';
   document.getElementById('cFactura').value = p.factura||'';
   document.getElementById('cNombre').value = p.nombre||'';
-  // Separar dirección de telObs si existe el separador
-  const partes = (p.domicilio||'').split(' — ');
-  document.getElementById('cDireccion').value = partes[0] || '';
-  document.getElementById('cTelObs').value = p.telObs || partes.slice(1).join(' — ') || '';
+  document.getElementById('cDireccion').value = p.direccion || p.domicilio || '';
+  document.getElementById('cTelefono').value = p.telefono || '';
+  document.getElementById('cObservaciones').value = p.observaciones || '';
   // Convertir fecha display (dd/mm/yy) a YYYY-MM-DD para el input date
   const fp = parseFecha(p.fecha);
   if(fp && !isNaN(fp)){
@@ -2294,7 +2306,9 @@ function guardarPedido(){
   const nombre = document.getElementById('cNombre').value.trim();
   const factura = document.getElementById('cFactura').value.trim();
   const dir = document.getElementById('cDireccion').value.trim();
-  const telObs = document.getElementById('cTelObs').value.trim();
+  const tel = document.getElementById('cTelefono').value.trim();
+  const obs = document.getElementById('cObservaciones').value.trim();
+  const telObs = [tel, obs].filter(Boolean).join(' — ');
   const fecha = document.getElementById('cFecha').value;
 
   // Validar obligatorios
@@ -2303,7 +2317,6 @@ function guardarPedido(){
   if(!factura){ alert('El número de factura es obligatorio.'); document.getElementById('cFactura').focus(); return; }
   if(!dir){ alert('La dirección de entrega es obligatoria.'); document.getElementById('cDireccion').focus(); return; }
 
-  const obs = '';
   const chofer = '';
   const estado = 'pendiente';
   const cliente = document.getElementById('cCliente').value.trim();
@@ -2327,8 +2340,9 @@ function guardarPedido(){
       p.factura = factura;
       p.domicilio = dir + (telObs ? ' — ' + telObs : '');
       p.direccion = dir;
+      p.telefono = tel;
       p.telObs = telObs;
-      p.observaciones = '';
+      p.observaciones = obs;
       p.fecha = fechaDisplay;
       if(p.domicilio !== domAnterior){ p._lat=null; p._lng=null; }
       const params = new URLSearchParams({
@@ -2356,8 +2370,9 @@ function guardarPedido(){
     factura: factura,
     domicilio: dir + (telObs ? ' — ' + telObs : ''),
     direccion: dir,
+    telefono: tel,
     telObs: telObs,
-    observaciones: '',
+    observaciones: obs,
     fecha: fechaDisplay,
     sucursal: suc,
     chofer: chofer,
@@ -2403,6 +2418,7 @@ function gasSavePedidoNube(p, onDone) {
     factura:       p.factura       || '',
     domicilio:     p.direccion     || p.domicilio || '',
     observaciones: p.observaciones || '',
+    telefono:      p.telefono      || '',
     fecha:         p.fecha         || '',
     horacarga:     p._cargadoEn    || ''
   });
