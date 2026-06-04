@@ -717,8 +717,12 @@ tbody tr.entregado:hover{opacity:.65}
         <input type="text" id="cNombre" placeholder="Apellido y nombre o razón social"/>
       </div>
       <div class="field">
-        <label>Domicilio y observaciones *</label>
-        <textarea id="cDireccion" placeholder="Dirección, teléfono, horarios, instrucciones especiales..." style="min-height:80px"></textarea>
+        <label>Dirección *</label>
+        <input type="text" id="cDireccion" placeholder="Calle, número, barrio"/>
+      </div>
+      <div class="field">
+        <label>Teléfono y observaciones</label>
+        <input type="text" id="cTelObs" placeholder="3876054501 LLAMAR ANTES DE IR"/>
         <input type="hidden" id="cObservaciones"/>
       </div>
 
@@ -792,8 +796,9 @@ const SEGUIMIENTO_BASE = 'https://logisticamartel-ops.github.io/martel-delivery/
 // Tracking de mensajes enviados por WhatsApp
 const _wspSent = (function(){ try{ return JSON.parse(localStorage.getItem('martel_wsp_sent')||'{}'); }catch(e){ return {}; } })();
 function _wspKey(p){ return p.sucursal+':'+p.factura; }
-function _extractTel(domicilio){
-  const m = (domicilio||'').match(/\b(\d{2,4}[\s.\-]?\d{3,4}[\s.\-]?\d{3,4})\b/);
+function _extractTel(domicilio, telObs){
+  const texto = telObs || domicilio || '';
+  const m = texto.match(/\b(\d{2,4}[\s.\-]?\d{3,4}[\s.\-]?\d{3,4})\b/);
   if(!m) return null;
   const digits = m[1].replace(/[\s.\-]/g,'');
   if(digits.length < 9) return null;
@@ -1417,7 +1422,7 @@ function buildRow(p){
     <td onclick="event.stopPropagation()" style="text-align:center;width:75px;white-space:nowrap">
       ${(()=>{
         const sent = _wspSent[_wspKey(p)];
-        const tel = _extractTel(p.domicilio);
+        const tel = _extractTel(p.domicilio, p.telObs);
         const puedeEnviar = tel && p.remito==='descargado' && !sent;
         if(sent) return `<span title="Seguimiento enviado" style="color:var(--green);font-size:11px;padding:3px">✓</span>`;
         if(!tel || p.estado==='entregado') return `<span style="color:var(--border2);font-size:11px;padding:3px">📲</span>`;
@@ -2238,7 +2243,7 @@ function abrirCarga(sucParam){
   const hoy = new Date().toISOString().split('T')[0];
   document.getElementById('cFecha').value = hoy;
   // Limpiar campos
-  ['cCliente','cFactura','cNombre','cDireccion','cObservaciones'].forEach(id=>{
+  ['cCliente','cFactura','cNombre','cDireccion','cTelObs','cObservaciones'].forEach(id=>{
     document.getElementById(id).value='';
   });
 
@@ -2267,7 +2272,10 @@ function editarPedido(id){
   document.getElementById('cCliente').value = p.cliente||'';
   document.getElementById('cFactura').value = p.factura||'';
   document.getElementById('cNombre').value = p.nombre||'';
-  document.getElementById('cDireccion').value = p.domicilio || '';
+  // Separar dirección de telObs si existe el separador
+  const partes = (p.domicilio||'').split(' — ');
+  document.getElementById('cDireccion').value = partes[0] || '';
+  document.getElementById('cTelObs').value = p.telObs || partes.slice(1).join(' — ') || '';
   // Convertir fecha display (dd/mm/yy) a YYYY-MM-DD para el input date
   const fp = parseFecha(p.fecha);
   if(fp && !isNaN(fp)){
@@ -2286,6 +2294,7 @@ function guardarPedido(){
   const nombre = document.getElementById('cNombre').value.trim();
   const factura = document.getElementById('cFactura').value.trim();
   const dir = document.getElementById('cDireccion').value.trim();
+  const telObs = document.getElementById('cTelObs').value.trim();
   const fecha = document.getElementById('cFecha').value;
 
   // Validar obligatorios
@@ -2316,8 +2325,9 @@ function guardarPedido(){
       p.cliente = cliente;
       p.nombre = nombre;
       p.factura = factura;
-      p.domicilio = dir;
+      p.domicilio = dir + (telObs ? ' — ' + telObs : '');
       p.direccion = dir;
+      p.telObs = telObs;
       p.observaciones = '';
       p.fecha = fechaDisplay;
       if(p.domicilio !== domAnterior){ p._lat=null; p._lng=null; }
@@ -2344,8 +2354,9 @@ function guardarPedido(){
     cliente: cliente,
     nombre: nombre,
     factura: factura,
-    domicilio: dir,
+    domicilio: dir + (telObs ? ' — ' + telObs : ''),
     direccion: dir,
+    telObs: telObs,
     observaciones: '',
     fecha: fechaDisplay,
     sucursal: suc,
