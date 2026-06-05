@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Mis Entregas — Martel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#0F172A;color:#E5E7EB;font-family:'IBM Plex Sans',sans-serif;min-height:100vh}
+.header{background:#E30613;padding:18px 20px 14px;text-align:center;position:sticky;top:0;z-index:10;position:relative}
+.header-logo{font-size:16px;font-weight:700;letter-spacing:.06em;color:white}
+.header-chofer{font-size:20px;font-weight:700;color:white;margin-top:2px}
+.header-count{font-size:12px;color:rgba(255,255,255,.75);margin-top:4px}
+.refresh-btn{position:absolute;right:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.2);border:none;color:white;width:38px;height:38px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+.content{padding:14px;display:flex;flex-direction:column;gap:10px}
+.card{background:#111827;border:1px solid rgba(148,163,184,.15);border-radius:12px;padding:16px}
+.card.done{opacity:.45;pointer-events:none}
+.card-nombre{font-size:16px;font-weight:700;color:#E5E7EB;margin-bottom:4px}
+.card-dir{font-size:13px;color:#94A3B8;line-height:1.45;margin-bottom:6px}
+.card-factura{font-size:11px;color:#475569;font-family:monospace;margin-bottom:14px}
+.btn-entregar{width:100%;padding:13px;background:#22c55e;border:none;border-radius:8px;color:white;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.03em}
+.btn-entregar:active{background:#16a34a;transform:scale(.98)}
+.card-done-label{text-align:center;color:#22c55e;font-weight:600;font-size:14px;padding:6px 0}
+/* Modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+.modal-box{background:#111827;border:1px solid rgba(148,163,184,.2);border-radius:16px;padding:28px 22px;width:100%;max-width:360px}
+.modal-title{font-size:17px;font-weight:700;text-align:center;margin-bottom:18px}
+.modal-nombre{font-size:17px;font-weight:700;color:#E5E7EB;text-align:center;margin-bottom:6px}
+.modal-dir{font-size:13px;color:#94A3B8;text-align:center;line-height:1.45;margin-bottom:24px}
+.modal-btns{display:flex;gap:10px}
+.btn-cancel{flex:1;padding:13px;background:#1E293B;border:1px solid rgba(148,163,184,.2);border-radius:8px;color:#94A3B8;font-size:14px;font-weight:600;cursor:pointer}
+.btn-confirm{flex:1;padding:13px;background:#22c55e;border:none;border-radius:8px;color:white;font-size:14px;font-weight:700;cursor:pointer}
+.loading{text-align:center;padding:60px 20px;color:#94A3B8;font-size:14px}
+.empty{text-align:center;padding:60px 20px;color:#22c55e;font-size:15px;font-weight:600;line-height:1.6}
+.error{text-align:center;padding:60px 20px;color:#f87171;font-size:14px;line-height:1.6}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">🚛 MARTEL PINTURERIAS</div>
+  <div class="header-chofer" id="choferTitle">—</div>
+  <div class="header-count" id="countLabel"></div>
+  <button class="refresh-btn" onclick="location.reload()" title="Actualizar">↻</button>
+</div>
+
+<div class="content" id="content">
+  <div class="loading">Cargando pedidos...</div>
+</div>
+
+<div class="modal" id="modal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-title">¿Confirmar entrega?</div>
+    <div class="modal-nombre" id="modalNombre"></div>
+    <div class="modal-dir" id="modalDir"></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn-confirm" id="btnConfirm">✓ Sí, entregado</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyHZRV1jZ5mADDUnS6ydDBB1-iF3bmsnKu-g6SLjhRukQ0km0s2NbqmiGQ-emKSQiRk/exec';
+
+const CHOFERES_NOMBRES = {
+  victor:'Víctor', cacho:'Salvador', puma:'Juan Carlos',
+  guillermo:'Guillermo', gustavo:'Gustavo', rafael:'Rafael', fernando:'Fernando'
+};
+
+const urlParams = new URLSearchParams(location.search);
+const choferKey = (urlParams.get('c') || '').toLowerCase().trim();
+const choferNombre = CHOFERES_NOMBRES[choferKey] || (choferKey ? choferKey.charAt(0).toUpperCase()+choferKey.slice(1) : '');
+
+if (!choferKey) {
+  document.getElementById('choferTitle').textContent = 'Sin chofer';
+  document.getElementById('content').innerHTML = '<div class="error">Link inválido.<br><small>Pedile el link correcto al encargado.</small></div>';
+} else {
+  document.getElementById('choferTitle').textContent = choferNombre;
+  cargarPedidos();
+}
+
+let pedidosData = [];
+
+function cargarPedidos() {
+  document.getElementById('content').innerHTML = '<div class="loading">Cargando pedidos...</div>';
+  const cb = '_ch_' + Date.now();
+  const sc = document.createElement('script');
+  sc.onerror = function() {
+    document.getElementById('content').innerHTML = '<div class="error">No se pudo conectar.<br>Tocá ↻ para reintentar.</div>';
+  };
+  window[cb] = function(data) {
+    delete window[cb]; sc.remove();
+    if (!data || !data.ok) {
+      document.getElementById('content').innerHTML = '<div class="error">Error al cargar pedidos.</div>';
+      return;
+    }
+    pedidosData = (data.pedidos || []).map(function(p){ return Object.assign({}, p, {_done: false}); });
+    renderPedidos();
+  };
+  sc.src = GAS_URL + '?' + new URLSearchParams({action:'get_chofer_pedidos', chofer:choferKey, callback:cb}).toString();
+  document.head.appendChild(sc);
+}
+
+function renderPedidos() {
+  const pendientes = pedidosData.filter(function(p){ return !p._done; }).length;
+  document.getElementById('countLabel').textContent =
+    pendientes + ' pedido' + (pendientes !== 1 ? 's' : '') + ' pendiente' + (pendientes !== 1 ? 's' : '');
+
+  if (!pedidosData.length) {
+    document.getElementById('content').innerHTML = '<div class="empty">✅ No tenés pedidos<br>pendientes por entregar.</div>';
+    return;
+  }
+
+  document.getElementById('content').innerHTML = pedidosData.map(function(p, i) {
+    if (p._done) {
+      return '<div class="card done"><div class="card-done-label">✅ Entregado — ' + esc(p.nombre) + '</div></div>';
+    }
+    return '<div class="card" id="card-' + i + '">' +
+      '<div class="card-nombre">' + esc(p.nombre) + '</div>' +
+      '<div class="card-dir">' + esc(p.domicilio) + '</div>' +
+      '<div class="card-factura">Factura: ' + esc(p.factura) + ' · ' + esc(p.sucursal) + '</div>' +
+      '<button class="btn-entregar" onclick="abrirModal(' + i + ')">📦 Marcar entregado</button>' +
+      '</div>';
+  }).join('');
+}
+
+function abrirModal(i) {
+  const p = pedidosData[i];
+  document.getElementById('modalNombre').textContent = p.nombre;
+  document.getElementById('modalDir').textContent = p.domicilio;
+  document.getElementById('btnConfirm').onclick = function() {
+    cerrarModal();
+    marcarEntregado(i);
+  };
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function cerrarModal() {
+  document.getElementById('modal').style.display = 'none';
+}
+
+function marcarEntregado(i) {
+  const p = pedidosData[i];
+  new Image().src = GAS_URL + '?' + new URLSearchParams({
+    action: 'write',
+    sucursal: p.sucursal,
+    cliente: p.cliente,
+    factura: p.factura,
+    remito: 'completo'
+  }).toString();
+  pedidosData[i]._done = true;
+  renderPedidos();
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.getElementById('modal').addEventListener('click', function(e) {
+  if (e.target === this) cerrarModal();
+});
+</script>
+</body>
+</html>

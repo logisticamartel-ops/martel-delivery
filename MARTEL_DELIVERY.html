@@ -777,7 +777,7 @@ const MATRICULAS={
 const CBASE={arenales:[-24.772,-65.418],trescerritos:[-24.758,-65.398],rioja:[-24.802,-65.432],malvinas:[-24.768,-65.443],chile:[-24.792,-65.407],balcarce:[-24.812,-65.421],ecommerce:[-24.7859,-65.4117]};
 const MAP_CENTER=[-24.7921,-65.4100];
 const SYNC_INTERVAL_MS=3*60*1000;
-const GEO_DELAY_MS=1100;
+const GEO_DELAY_MS=200;
 const CHOFERES_TEL = {
   victor:    '5493874573833',
   cacho:     '5493874485602',
@@ -927,7 +927,7 @@ const DEMO=[
 ];
 
 // ── API / GAS ─────────────────────────────────────────────────
-const GAS_URL ='https://script.google.com/macros/s/AKfycbwTGlAqgXVDhx6QJgt6dTTYXF-Ll2iA1kaWfD2xaP24JjQRGWijTAK4F9z5qs0i2w_N/exec';
+const GAS_URL ='https://script.google.com/macros/s/AKfycbyHZRV1jZ5mADDUnS6ydDBB1-iF3bmsnKu-g6SLjhRukQ0km0s2NbqmiGQ-emKSQiRk/exec';
 const MAPS_RE = /https?:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps|maps\.google\.com|www\.google\.com\/maps)[^\s]*/i;
 
 function _ejecutarSync(btnId, labelBusy, labelOk, onOk, silentError){
@@ -1086,12 +1086,12 @@ async function geocodificar(p){
     return;
   }
   try{
-    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(query);
-    const res = await fetch(url, {headers:{'Accept-Language':'es'}});
+    const url = 'https://maps.googleapis.com/maps/api/geocode/json?address=' + encodeURIComponent(query) + '&key=AIzaSyALq-RkPJhArUHgWf_JbjAmni1oXyw3rII';
+    const res = await fetch(url);
     const data = await res.json();
-    if(data && data[0]){
-      p._lat = parseFloat(data[0].lat);
-      p._lng = parseFloat(data[0].lon);
+    if(data && data.results && data.results[0]){
+      p._lat = data.results[0].geometry.location.lat;
+      p._lng = data.results[0].geometry.location.lng;
       geoCache[key] = [p._lat, p._lng];
       try{ localStorage.setItem('martel_geo_cache', JSON.stringify(geoCache)); }catch(e){}
     } else {
@@ -1412,7 +1412,7 @@ function buildRow(p){
     <td class="mn">${p.cliente||'—'}</td>
     <td class="nb" title="${p.nombre}">${p.nombre||'—'}</td>
     <td class="mn">${p.factura||'—'}</td>
-    <td class="dm" title="${p.domicilio}">${p.domicilio||'—'}${(()=>{const m=(p.domicilio||'').match(MAPS_RE)||(p.observaciones||'').match(MAPS_RE);return m?` <a href="${m[0]}" target="_blank" onclick="event.stopPropagation()" title="Abrir en Google Maps" style="color:var(--green);text-decoration:none;font-size:11px">📍</a>`:'';})()}</td>
+    <td class="dm" title="${p.domicilio}${p.telefono?' | Tel: '+p.telefono:''}">${p.domicilio||'—'}${(()=>{const m=(p.domicilio||'').match(MAPS_RE)||(p.observaciones||'').match(MAPS_RE);return m?` <a href="${m[0]}" target="_blank" onclick="event.stopPropagation()" title="Abrir en Google Maps" style="color:var(--green);text-decoration:none;font-size:11px">📍</a>`:'';})()}</td>
     <td style="font-size:11px;color:var(--muted);white-space:nowrap">${p.fecha||'—'}</td>
     <td style="font-size:11px;color:var(--cyan)">${SLBL[p.sucursal]||p.sucursal}</td>
     <td class="admin-only" style="font-family:var(--mono);font-size:10px;white-space:nowrap;color:${p._cargadoEn?(new Date(p._cargadoEn).getHours()>=17?'var(--red)':'var(--green)'):'var(--border2)'}">${fmtTs(p._cargadoEn)}</td>
