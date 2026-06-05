@@ -40,6 +40,7 @@ body{background:#0F172A;color:#E5E7EB;font-family:'IBM Plex Sans',sans-serif;min
 .chofer-name{font-size:14px;font-weight:700;color:#E5E7EB;margin-top:1px}
 .chofer-tel{font-family:'IBM Plex Mono',monospace;font-size:12px;color:#06b6d4;margin-top:2px}
 .chofer-tel a{color:#06b6d4;text-decoration:none}
+.horario{font-size:11px;color:#475569;margin-top:6px;letter-spacing:.02em}
 /* Footer */
 .card-footer{padding:16px 24px;border-top:1px solid rgba(148,163,184,.1);text-align:center}
 .footer-logo{font-size:11px;color:#475569;letter-spacing:.08em}
@@ -134,6 +135,7 @@ function renderPedido(d){
         <div class="chofer-label">Tu repartidor</div>
         <div class="chofer-name">${choferNombre}</div>
         ${choferFmt?`<div class="chofer-tel"><a href="tel:+${choferTel}">${choferFmt}</a></div>`:''}
+        <div class="horario">📞 Lun a Vie 9 a 18 hs &nbsp;·&nbsp; Sáb 8 a 13 hs</div>
       </div>
     </div>` : ''}
   `;
