@@ -115,9 +115,7 @@ function renderPedidos() {
   }
 
   document.getElementById('content').innerHTML = pedidosData.map(function(p, i) {
-    if (p._done) {
-      return '<div class="card done"><div class="card-done-label">✅ Entregado — ' + esc(p.nombre) + '</div></div>';
-    }
+    if (p._done) return '';
     return '<div class="card" id="card-' + i + '">' +
       '<div class="card-nombre">' + esc(p.nombre) + '</div>' +
       '<div class="card-dir">' + esc(p.domicilio) + '</div>' +
