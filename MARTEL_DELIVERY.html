@@ -939,7 +939,7 @@ const DEMO=[
 ];
 
 // ── API / GAS ─────────────────────────────────────────────────
-const GAS_URL ='https://script.google.com/macros/s/AKfycby8x_KJjGACZMQJuM3t9YPPs1DOhc0hnv3T8S_26g-BRw8qzz0rKoZ4U45daz1Sbyvj/exec';
+const GAS_URL ='https://script.google.com/macros/s/AKfycbx6jAI3lGPgYiC5t8n_FS-stRV62Qka8GPHEJ95XX419emKq8BKrM13v4tDCBLyhX9y/exec';
 const MAPS_RE = /(?:https?:\/\/)?(?:maps\.app\.goo\.gl|goo\.gl\/maps|maps\.google\.com|(?:www\.)?google\.com\/maps)[^\s]*/i;
 
 function _ejecutarSync(btnId, labelBusy, labelOk, onOk, silentError){
@@ -2081,6 +2081,25 @@ function formatFechaRep(s){
   return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
 }
 
+let _historialCache = null;
+let _historialTs = 0;
+
+function cargarHistorial(cb){
+  const ahora = Date.now();
+  if(_historialCache && ahora - _historialTs < 5*60*1000){ cb(_historialCache); return; }
+  const cbName = '_hist_'+ahora;
+  const sc = document.createElement('script');
+  window[cbName] = function(data){
+    delete window[cbName]; sc.remove();
+    _historialCache = (data.ok && data.rows) ? data.rows : [];
+    _historialTs = Date.now();
+    cb(_historialCache);
+  };
+  sc.onerror = function(){ delete window[cbName]; sc.remove(); cb([]); };
+  sc.src = GAS_URL+'?'+new URLSearchParams({action:'get_historial',callback:cbName}).toString();
+  document.head.appendChild(sc);
+}
+
 function abrirReportes(){
   document.getElementById('repWrap').style.display='flex';
   setRepPeriod('mes');
@@ -2122,16 +2141,48 @@ function renderReporte(){
   const desde = document.getElementById('repDesde').value;
   const hasta = document.getElementById('repHasta').value;
   if(!desde || !hasta) return;
-  const dDesde = new Date(desde + 'T00:00:00');
-  const dHasta = new Date(hasta + 'T23:59:59');
-  
-  // Filtrar pedidos del período
-  const ped = ALL.filter(p => {
-    const f = repFecha(p);
-    if(!f) return false;
-    return f >= dDesde && f <= dHasta;
+
+  document.getElementById('repContent').innerHTML = '<p style="color:var(--muted);text-align:center;padding:60px;font-size:14px">Cargando historial...</p>';
+
+  cargarHistorial(function(historial){
+    const dDesde = new Date(desde + 'T00:00:00');
+    const dHasta = new Date(hasta + 'T23:59:59');
+
+    // Pedidos actuales en ALL filtrados por período
+    const pedActuales = ALL.filter(p => {
+      const f = repFecha(p);
+      if(!f) return false;
+      return f >= dDesde && f <= dHasta;
+    });
+
+    // Entregados del historial GAS filtrados por fecha de entrega
+    const histFiltrado = historial.filter(function(r){
+      const f = parseFecha(r.fecha_entrega ? r.fecha_entrega.split(' ')[0] : '');
+      if(!f) return false;
+      return f >= dDesde && f <= dHasta;
+    });
+
+    // Merge: historial como entregados + actuales no entregados
+    // Evitar duplicados por factura+sucursal
+    const claves = new Set(histFiltrado.map(r => r.sucursal+':'+r.factura));
+    const pedSinDuplicar = pedActuales.filter(p => !claves.has(p.sucursal+':'+p.factura));
+
+    // Unificar en formato común
+    const histComoP = histFiltrado.map(function(r){
+      return {
+        nombre: r.nombre, factura: r.factura, sucursal: r.sucursal,
+        domicilio: r.domicilio, fecha: r.fecha_pedido,
+        chofer: r.chofer, estado: 'entregado', remito: 'completo',
+        cliente: r.cliente
+      };
+    });
+
+    const ped = pedSinDuplicar.concat(histComoP);
+    _renderReporteConDatos(ped, dDesde, dHasta, histFiltrado.length);
   });
-  
+}
+
+function _renderReporteConDatos(ped, dDesde, dHasta, histTotal){
   if(ped.length === 0){
     document.getElementById('repContent').innerHTML = 
       '<p style="color:var(--muted);text-align:center;padding:60px;font-size:14px">No hay pedidos en el período seleccionado</p>';
@@ -2269,7 +2320,7 @@ function renderReporte(){
       </table>
     </div>
   `;
-}
+}  // fin _renderReporteConDatos
 
 
 
