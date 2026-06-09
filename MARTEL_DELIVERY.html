@@ -608,6 +608,18 @@ tbody tr.entregado:hover{opacity:.65}
         <option value="entregado">Entregado</option>
       </select>
       <span id="fmStatus" style="font-size:11px;color:var(--amber);font-family:var(--mono);display:none">Geocodificando...</span>
+      <div style="display:flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:3px 8px;min-width:220px">
+        <svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:var(--muted);fill:none;stroke-width:2;flex-shrink:0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="fmBuscar" type="text" placeholder="Buscar dirección..." autocomplete="off"
+          style="background:none;border:none;outline:none;color:var(--text);font-family:var(--sans);font-size:12px;width:100%"
+          onkeydown="if(event.key==='Enter')buscarDireccionMapa()"/>
+        <button onclick="buscarDireccionMapa()" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:2px;display:flex;align-items:center" title="Buscar">
+          <svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+        <button id="fmBuscarClear" onclick="limpiarBusquedaMapa()" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:2px;display:none;align-items:center" title="Limpiar">
+          <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
       <div class="fullmap-legend" id="fmLegend"></div>
       <button class="btn btn-ghost" onclick="toggleHistoricoPanel()" title="Ver recorrido histórico" style="gap:5px">
         🗺 Histórico
@@ -928,7 +940,7 @@ const DEMO=[
 
 // ── API / GAS ─────────────────────────────────────────────────
 const GAS_URL ='https://script.google.com/macros/s/AKfycby8x_KJjGACZMQJuM3t9YPPs1DOhc0hnv3T8S_26g-BRw8qzz0rKoZ4U45daz1Sbyvj/exec';
-const MAPS_RE = /https?:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps|maps\.google\.com|www\.google\.com\/maps)[^\s]*/i;
+const MAPS_RE = /(?:https?:\/\/)?(?:maps\.app\.goo\.gl|goo\.gl\/maps|maps\.google\.com|(?:www\.)?google\.com\/maps)[^\s]*/i;
 
 function _ejecutarSync(btnId, labelBusy, labelOk, onOk, silentError){
   const btn = document.getElementById(btnId);
@@ -1054,6 +1066,16 @@ const geoCache = (function(){
 
 async function geocodificar(p){
   if(p._lat) return;
+  // Extraer coordenadas directamente si el domicilio tiene ?q=lat,lng o @lat,lng
+  const qm = (p.domicilio||'').match(/[?&]q=(-?\d+\.\d+)(?:,|%2C)(-?\d+\.\d+)/i)||
+              (p.domicilio||'').match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if(qm){
+    p._lat=parseFloat(qm[1]); p._lng=parseFloat(qm[2]);
+    const key=p.domicilio.toLowerCase().trim();
+    geoCache[key]=[p._lat,p._lng];
+    try{localStorage.setItem('martel_geo_cache',JSON.stringify(geoCache));}catch(e){}
+    return;
+  }
   // Limpiar domicilio — sacar todo lo que no es dirección
   let dom = p.domicilio
     // Sacar teléfonos/celulares con prefijos
@@ -1078,7 +1100,7 @@ async function geocodificar(p){
   const partes = dom.split(/\s+[-–—]\s+|\s*,\s+(?=[A-Z])/);
   dom = partes[0].trim();
   if(dom.length < 5) dom = p.domicilio.split(/\s+[-–—]\s+|,/)[0].trim();
-  const query = dom + ', Salta, Argentina';
+  const query = dom + ', Salta Capital, Salta, Argentina';
   const key = p.domicilio.toLowerCase().trim();
   if(geoCache[key]){
     p._lat = geoCache[key][0];
@@ -1142,7 +1164,8 @@ async function resolverMapsLinks(){
     if(!match) continue;
     const mapUrl = match[0];
     // Intentar extraer coords directamente de la URL (links largos ya las tienen)
-    const coordMatch = mapUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    const coordMatch = mapUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/) ||
+                       mapUrl.match(/[?&]q=(-?\d+\.\d+)(?:,|%2C)(-?\d+\.\d+)/i);
     if(coordMatch){
       p._lat = parseFloat(coordMatch[1]); p._lng = parseFloat(coordMatch[2]);
       geoCache[p.domicilio.toLowerCase().trim()] = [p._lat, p._lng];
@@ -1909,6 +1932,7 @@ function _abrirMapaFull(){
 
 function cerrarMapaFull(){
   document.getElementById('fullmapWrap').style.display='none';
+  limpiarBusquedaMapa();
 }
 
 function _dibujarMarcadores(ped){
@@ -2436,6 +2460,37 @@ function showToast(msg){
 /* ── HISTÓRICO DE RECORRIDOS ────────────────────────────────── */
 let etRecorridoLayer = null;
 const etVehicleIds = {}; // domain → vehicle_id, se llena con el GPS en tiempo real
+
+let _buscarMarker = null;
+function limpiarBusquedaMapa(){
+  if(_buscarMarker){ fullMapInstance.removeLayer(_buscarMarker); _buscarMarker=null; }
+  document.getElementById('fmBuscar').value='';
+  document.getElementById('fmBuscarClear').style.display='none';
+}
+async function buscarDireccionMapa(){
+  const input = document.getElementById('fmBuscar');
+  const q = (input.value||'').trim();
+  if(!q) return;
+  const query = q + ', Salta Capital, Salta, Argentina';
+  try{
+    const url = 'https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(query)+'&key=AIzaSyALq-RkPJhArUHgWf_JbjAmni1oXyw3rII';
+    const res = await fetch(url);
+    const data = await res.json();
+    if(!data.results || !data.results[0]){ alert('No se encontró la dirección'); return; }
+    const loc = data.results[0].geometry.location;
+    if(_buscarMarker) fullMapInstance.removeLayer(_buscarMarker);
+    _buscarMarker = L.marker([loc.lat, loc.lng], {
+      icon: L.divIcon({
+        className:'',
+        html:'<div style="background:#f59e0b;width:14px;height:14px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,.5)"></div>',
+        iconSize:[14,14], iconAnchor:[7,7]
+      })
+    }).addTo(fullMapInstance);
+    _buscarMarker.bindPopup('<b style="color:#f59e0b">📍 '+data.results[0].formatted_address+'</b>').openPopup();
+    fullMapInstance.setView([loc.lat, loc.lng], 17);
+    document.getElementById('fmBuscarClear').style.display='flex';
+  }catch(e){ alert('Error al buscar'); }
+}
 
 function toggleHistoricoPanel(){
   const panel = document.getElementById('historicoPanel');
