@@ -2089,13 +2089,29 @@ function cargarHistorial(cb){
   if(_historialCache && ahora - _historialTs < 5*60*1000){ cb(_historialCache); return; }
   const cbName = '_hist_'+ahora;
   const sc = document.createElement('script');
+  let done = false;
+  const timer = setTimeout(function(){
+    if(done) return;
+    done = true;
+    delete window[cbName]; sc.remove();
+    cb([]);
+  }, 8000);
   window[cbName] = function(data){
+    if(done) return;
+    done = true;
+    clearTimeout(timer);
     delete window[cbName]; sc.remove();
     _historialCache = (data.ok && data.rows) ? data.rows : [];
     _historialTs = Date.now();
     cb(_historialCache);
   };
-  sc.onerror = function(){ delete window[cbName]; sc.remove(); cb([]); };
+  sc.onerror = function(){
+    if(done) return;
+    done = true;
+    clearTimeout(timer);
+    delete window[cbName]; sc.remove();
+    cb([]);
+  };
   sc.src = GAS_URL+'?'+new URLSearchParams({action:'get_historial',callback:cbName}).toString();
   document.head.appendChild(sc);
 }
