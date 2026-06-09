@@ -1100,7 +1100,10 @@ async function geocodificar(p){
   const partes = dom.split(/\s+[-–—]\s+|\s*,\s+(?=[A-Z])/);
   dom = partes[0].trim();
   if(dom.length < 5) dom = p.domicilio.split(/\s+[-–—]\s+|,/)[0].trim();
-  const query = dom + ', Salta Capital, Salta, Argentina';
+  // Si la dirección menciona una localidad fuera de Salta Capital, no agregar "Salta Capital"
+  const LOCALIDADES = /vaqueros|san lorenzo|la caldera|villa san lorenzo|cerrillos|rosario de lerma|campo quijano|güemes|gemes|la merced|chicoana|cachi|cafayate/i;
+  const sufijo = LOCALIDADES.test(dom) ? ', Salta, Argentina' : ', Salta Capital, Salta, Argentina';
+  const query = dom + sufijo;
   const key = p.domicilio.toLowerCase().trim();
   if(geoCache[key]){
     p._lat = geoCache[key][0];
