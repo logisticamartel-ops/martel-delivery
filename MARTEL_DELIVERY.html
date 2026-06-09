@@ -258,7 +258,7 @@ tbody tr.entregado:hover{opacity:.65}
 .ch-pill{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
 .bar-mini{height:6px;border-radius:3px;background:var(--red);display:inline-block;vertical-align:middle;min-width:4px}
 /* LOGIN */
-.login-suc-btn{background:var(--surface2);border:1px solid var(--border2);color:var(--fg);border-radius:var(--r);padding:9px 10px;cursor:pointer;font-size:12px;font-weight:600;transition:all .15s;font-family:var(--sans)}
+.login-suc-btn{background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:var(--r);padding:9px 10px;cursor:pointer;font-size:12px;font-weight:600;transition:all .15s;font-family:var(--sans)}
 .login-suc-btn:hover{border-color:var(--amber);color:var(--amber)}
 /* MODO SUCURSAL */
 .suc-mode .admin-only{display:none!important}
@@ -387,12 +387,12 @@ tbody tr.entregado:hover{opacity:.65}
       <div style="display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;background:#E30613;border-radius:14px;margin-bottom:12px">
         <svg viewBox="0 0 24 24" style="width:28px;height:28px;stroke:white;fill:none;stroke-width:2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
       </div>
-      <div style="font-size:16px;font-weight:700;color:var(--fg);letter-spacing:.04em">MARTEL PINTURERIAS</div>
+      <div style="font-size:16px;font-weight:700;color:var(--text);letter-spacing:.04em">MARTEL PINTURERIAS</div>
       <div style="font-size:11px;color:var(--muted);margin-top:3px;letter-spacing:.06em">Control de Delivery</div>
     </div>
     <div id="loginBtns">
       <div style="font-size:10px;color:var(--muted);text-align:center;margin-bottom:12px;text-transform:uppercase;letter-spacing:.1em">¿Desde dónde ingresás?</div>
-      <button onclick="loginAdmin()" style="width:100%;margin-bottom:10px;background:var(--surface2);border:1px solid var(--border2);color:var(--fg);border-radius:var(--r);padding:11px;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--sans);transition:border-color .15s" onmouseover="this.style.borderColor='var(--cyan)';this.style.color='var(--cyan)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--fg)'">🔐 Administrador</button>
+      <button onclick="loginAdmin()" style="width:100%;margin-bottom:10px;background:var(--surface2);border:1px solid var(--border2);color:var(--text);border-radius:var(--r);padding:11px;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--sans);transition:border-color .15s" onmouseover="this.style.borderColor='var(--cyan)';this.style.color='var(--cyan)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text)'">🔐 Administrador</button>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
         <button class="login-suc-btn" onclick="loginSucursal('arenales')">Arenales</button>
         <button class="login-suc-btn" onclick="loginSucursal('trescerritos')">Tres Cerritos</button>
@@ -404,10 +404,10 @@ tbody tr.entregado:hover{opacity:.65}
       </div>
     </div>
     <div id="loginPassSection" style="display:none">
-      <div style="font-size:13px;font-weight:700;color:var(--fg);margin-bottom:4px">Sucursal <span id="loginPassTitle" style="color:var(--amber)"></span></div>
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">Sucursal <span id="loginPassTitle" style="color:var(--amber)"></span></div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:14px">Ingresá la contraseña para continuar</div>
       <input id="loginPassInput" type="password" placeholder="Contraseña" autocomplete="off"
-        style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:var(--r);padding:10px 12px;font-size:14px;margin-bottom:6px;outline:none;font-family:var(--sans)"
+        style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:var(--r);padding:10px 12px;font-size:14px;margin-bottom:6px;outline:none;font-family:var(--sans)"
         onkeydown="if(event.key==='Enter')confirmarLoginPass()">
       <div id="loginPassErr" style="color:#f87171;font-size:12px;height:16px;margin-bottom:10px"></div>
       <div style="display:flex;gap:8px">
@@ -566,14 +566,14 @@ tbody tr.entregado:hover{opacity:.65}
 <div id="mapaAuthOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center;">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:32px 28px;min-width:300px;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,.5);">
     <div style="font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">Acceso restringido</div>
-    <div style="font-size:17px;font-weight:600;color:var(--fg);margin-bottom:18px">Mapa general</div>
+    <div style="font-size:17px;font-weight:600;color:var(--text);margin-bottom:18px">Mapa general</div>
     <input id="mapaPassInput" type="password" placeholder="Contraseña" autocomplete="off"
-      style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:var(--r);padding:9px 12px;font-size:14px;margin-bottom:8px;outline:none;"
+      style="width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:var(--r);padding:9px 12px;font-size:14px;margin-bottom:8px;outline:none;"
       onkeydown="if(event.key==='Enter')confirmarMapaPass()">
     <div id="mapaPassErr" style="color:var(--red,#f87171);font-size:12px;height:16px;margin-bottom:10px"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-ghost" onclick="cerrarMapaAuth()">Cancelar</button>
-      <button class="btn btn-primary" onclick="confirmarMapaPass()">Ingresar</button>
+      <button class="btn btn-red" onclick="confirmarMapaPass()">Ingresar</button>
     </div>
   </div>
 </div>
