@@ -2196,6 +2196,8 @@ function renderReporte(){
 }
 
 function _renderReporteConDatos(ped, dDesde, dHasta, histTotal){
+  const desde = dDesde.toISOString().split('T')[0];
+  const hasta = dHasta.toISOString().split('T')[0];
   if(ped.length === 0){
     document.getElementById('repContent').innerHTML = 
       '<p style="color:var(--muted);text-align:center;padding:60px;font-size:14px">No hay pedidos en el período seleccionado</p>';
