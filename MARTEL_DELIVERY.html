@@ -2158,44 +2158,41 @@ function renderReporte(){
   const hasta = document.getElementById('repHasta').value;
   if(!desde || !hasta) return;
 
-  document.getElementById('repContent').innerHTML = '<p style="color:var(--muted);text-align:center;padding:60px;font-size:14px">Cargando historial...</p>';
+  const dDesde = new Date(desde + 'T00:00:00');
+  const dHasta = new Date(hasta + 'T23:59:59');
 
-  cargarHistorial(function(historial){
-    const dDesde = new Date(desde + 'T00:00:00');
-    const dHasta = new Date(hasta + 'T23:59:59');
-
-    // Pedidos actuales en ALL filtrados por período
+  function buildPed(historial){
     const pedActuales = ALL.filter(p => {
       const f = repFecha(p);
       if(!f) return false;
       return f >= dDesde && f <= dHasta;
     });
-
-    // Entregados del historial GAS filtrados por fecha de entrega
-    const histFiltrado = historial.filter(function(r){
+    const histFiltrado = (historial||[]).filter(function(r){
       const f = parseFecha(r.fecha_entrega ? r.fecha_entrega.split(' ')[0] : '');
       if(!f) return false;
       return f >= dDesde && f <= dHasta;
     });
-
-    // Merge: historial como entregados + actuales no entregados
-    // Evitar duplicados por factura+sucursal
     const claves = new Set(histFiltrado.map(r => r.sucursal+':'+r.factura));
     const pedSinDuplicar = pedActuales.filter(p => !claves.has(p.sucursal+':'+p.factura));
-
-    // Unificar en formato común
     const histComoP = histFiltrado.map(function(r){
-      return {
-        nombre: r.nombre, factura: r.factura, sucursal: r.sucursal,
-        domicilio: r.domicilio, fecha: r.fecha_pedido,
-        chofer: r.chofer, estado: 'entregado', remito: 'completo',
-        cliente: r.cliente
-      };
+      return { nombre:r.nombre, factura:r.factura, sucursal:r.sucursal,
+               domicilio:r.domicilio, fecha:r.fecha_pedido,
+               chofer:r.chofer, estado:'entregado', remito:'completo', cliente:r.cliente };
     });
+    return { ped: pedSinDuplicar.concat(histComoP), histTotal: histFiltrado.length };
+  }
 
-    const ped = pedSinDuplicar.concat(histComoP);
-    _renderReporteConDatos(ped, dDesde, dHasta, histFiltrado.length);
-  });
+  // Mostrar inmediatamente con datos actuales
+  const immediato = buildPed(_historialCache || []);
+  _renderReporteConDatos(immediato.ped, dDesde, dHasta, immediato.histTotal);
+
+  // Si el historial no está en cache, cargarlo y actualizar
+  if(!_historialCache){
+    cargarHistorial(function(historial){
+      const actualizado = buildPed(historial);
+      _renderReporteConDatos(actualizado.ped, dDesde, dHasta, actualizado.histTotal);
+    });
+  }
 }
 
 function _renderReporteConDatos(ped, dDesde, dHasta, histTotal){
