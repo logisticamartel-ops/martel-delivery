@@ -1064,6 +1064,30 @@ const geoCache = (function(){
   }catch(e){ return {}; }
 })();
 
+function limpiarDomicilio(raw){
+  let dom = (raw||'')
+    .replace(/\b(cel|tel|t|celular|telefono|fono|wsp|whatsapp)[\s:\.\-]*(3\d[\d\s\.\-]{6,})/gi, '')
+    .replace(/\b3[678]\d{2}[\s\.\-]?\d{3}[\s\.\-]?\d{3,4}\b/g, '')
+    .replace(/\b\d{7,}\b/g, '')
+    .replace(/\bid[\s:\-]*\d+/gi, '')
+    .replace(/[-–—]\s*(cel|tel|t|llamar|enviar|retirar|solicitar|confirmar|solo|avisar|coordinar|solo por|envio|enviar).*/gi, '')
+    .replace(/\b(llamar|avisar|confirmar|coordinar|solicitar|retirar|enviar|solo por|solo\s+\w+\s+por)\b.*/gi, '')
+    .replace(/\([^)]*3[678]\d{7,}[^)]*\)/g, '')
+    .replace(/\((llamar|cel|tel|solo|avisar|retirar)[^)]*\)/gi, '')
+    .replace(/\s*[-–—]\s*$/, '')
+    .replace(/\s+/g, ' ').trim();
+  const partes = dom.split(/\s+[-–—]\s+|\s*,\s+(?=[A-Z])/);
+  dom = partes[0].trim();
+  if(dom.length < 5) dom = (raw||'').split(/\s+[-–—]\s+|,/)[0].trim();
+  // Eliminar palabras duplicadas consecutivas (ej: "ITUZAINGO 642 ITUZAINGO 642" → "ITUZAINGO 642")
+  dom = dom.replace(/\b(\w[\w\s]{1,30}?)\s+\1\b/gi, '$1').trim();
+  return dom;
+}
+function sufijoCiudad(dom){
+  const LOCALIDADES = /vaqueros|san lorenzo|la caldera|villa san lorenzo|cerrillos|rosario de lerma|campo quijano|güemes|gemes|la merced|chicoana|cachi|cafayate/i;
+  return LOCALIDADES.test(dom) ? ', Salta, Argentina' : ', Salta Capital, Salta, Argentina';
+}
+
 async function geocodificar(p){
   if(p._lat) return;
   // Extraer coordenadas directamente si el domicilio tiene ?q=lat,lng o @lat,lng
@@ -1076,34 +1100,8 @@ async function geocodificar(p){
     try{localStorage.setItem('martel_geo_cache',JSON.stringify(geoCache));}catch(e){}
     return;
   }
-  // Limpiar domicilio — sacar todo lo que no es dirección
-  let dom = p.domicilio
-    // Sacar teléfonos/celulares con prefijos
-    .replace(/\b(cel|tel|t|celular|telefono|fono|wsp|whatsapp)[\s:\.\-]*(3\d[\d\s\.\-]{6,})/gi, '')
-    // Sacar números de 7+ dígitos sueltos (teléfonos sin prefijo)
-    .replace(/\b3[678]\d{2}[\s\.\-]?\d{3}[\s\.\-]?\d{3,4}\b/g, '')
-    .replace(/\b\d{7,}\b/g, '')
-    // Sacar IDs de cliente
-    .replace(/\bid[\s:\-]*\d+/gi, '')
-    // Sacar instrucciones típicas (todo lo que viene después de estos triggers)
-    .replace(/[-–—]\s*(cel|tel|t|llamar|enviar|retirar|solicitar|confirmar|solo|avisar|coordinar|solo por|envio|enviar).*/gi, '')
-    .replace(/\b(llamar|avisar|confirmar|coordinar|solicitar|retirar|enviar|solo por|solo\s+\w+\s+por)\b.*/gi, '')
-    // Sacar contenido entre paréntesis si tiene números de teléfono
-    .replace(/\([^)]*3[678]\d{7,}[^)]*\)/g, '')
-    // Sacar paréntesis con instrucciones
-    .replace(/\((llamar|cel|tel|solo|avisar|retirar)[^)]*\)/gi, '')
-    // Limpiar separadores y espacios extra
-    .replace(/\s*[-–—]\s*$/, '')
-    .replace(/\s+/g, ' ').trim();
-
-    // Quedarse solo con la parte antes del primer separador fuerte (solo guiones con espacios)
-  const partes = dom.split(/\s+[-–—]\s+|\s*,\s+(?=[A-Z])/);
-  dom = partes[0].trim();
-  if(dom.length < 5) dom = p.domicilio.split(/\s+[-–—]\s+|,/)[0].trim();
-  // Si la dirección menciona una localidad fuera de Salta Capital, no agregar "Salta Capital"
-  const LOCALIDADES = /vaqueros|san lorenzo|la caldera|villa san lorenzo|cerrillos|rosario de lerma|campo quijano|güemes|gemes|la merced|chicoana|cachi|cafayate/i;
-  const sufijo = LOCALIDADES.test(dom) ? ', Salta, Argentina' : ', Salta Capital, Salta, Argentina';
-  const query = dom + sufijo;
+  const dom = limpiarDomicilio(p.domicilio);
+  const query = dom + sufijoCiudad(dom);
   const key = p.domicilio.toLowerCase().trim();
   if(geoCache[key]){
     p._lat = geoCache[key][0];
@@ -1384,7 +1382,7 @@ function filtered(){
   let p = suc==='todas' ? ALL : suc==='circuito' ? ALL.filter(x=>x.til) : ALL.filter(x=>x.sucursal===suc);
   const q = document.getElementById('sq').value.toLowerCase();
   const fc = document.getElementById('fc').value;
-  if(q) p=p.filter(x=>x.nombre.toLowerCase().includes(q)||x.domicilio.toLowerCase().includes(q)||x.factura.toLowerCase().includes(q)||x.cliente.toLowerCase().includes(q));
+  if(q) p=p.filter(x=>(x.nombre||'').toLowerCase().includes(q)||(x.domicilio||'').toLowerCase().includes(q)||(x.factura||'').toLowerCase().includes(q)||(x.cliente||'').toLowerCase().includes(q));
   if(fc) p=p.filter(x=>x.chofer===fc);
   if(!mostrarEntregados) p=p.filter(x=>x.estado!=='entregado');
   return p;
@@ -1607,7 +1605,7 @@ function detectarZona(domicilio, lat, lng){
   // Si tenemos coordenadas geocodificadas, usarlas (más preciso)
   if(lat && lng) return detectarZonaPorCoordenadas(lat, lng);
   // Fallback: detección por texto
-  const d = domicilio.toLowerCase();
+  const d = (domicilio||'').toLowerCase();
   for(const [zona, keywords] of Object.entries(ZONAS)){
     if(zona === 'Otros') continue;
     if(keywords.some(k => d.includes(k))) return zona;
@@ -1762,9 +1760,21 @@ function _buildMsgChofer(ch){
   let txt = '🚛 *MARTEL DELIVERY — '+fecha+'*\n';
   txt += '👤 *'+ch.toUpperCase()+'* — '+peds.length+' pedido'+(peds.length>1?'s':'')+'\n\n';
   peds.forEach(function(p,i){
+    const domRaw = p.domicilio||'';
+    const telMatch = domRaw.match(/\b(0?3\d{2,3}[\s\.\-]?(?:15[\s\.\-]?)?\d{3,4}[\s\.\-]?\d{4})\b/);
+    const telExtraido = telMatch ? telMatch[1].replace(/[\s\.\-]/g,'').replace(/^0/,'') : null;
+    // Para el mensaje: sacar teléfonos, tomar primer segmento antes del primer guión, quitar duplicados cortos
+    let domMsg = domRaw
+      .replace(/\b(cel|tel|celular|telefono|fono|wsp|whatsapp)[\s:\.\-]*(3\d[\d\s\.\-]{6,})/gi, '')
+      .replace(/\b3[678]\d{2}[\s\.\-]?\d{3}[\s\.\-]?\d{3,4}\b/g, '')
+      .replace(/\b\d{7,}\b/g, '')
+      .replace(/\s+/g, ' ').trim();
+    domMsg = domMsg.split(/\s+[-–—]\s+|\s*,\s+(?=[A-Z])/)[0].trim();
+    domMsg = domMsg.replace(/\b(\w+(?:\s+\w+){0,2})\s+\1\b/gi, '$1').trim();
     txt += (i+1)+'️⃣ *'+p.nombre+'*\n';
     txt += '   📋 '+p.factura+'\n';
-    txt += '   📍 '+p.domicilio+'\n';
+    txt += '   📍 '+domMsg+'\n';
+    if(telExtraido) txt += '   📞 '+telExtraido+'\n';
     txt += '   🏪 '+SLBL[p.sucursal]+'\n\n';
   });
   txt += '✅ Confirmá recepción de la lista';
@@ -1963,7 +1973,58 @@ function _dibujarMarcadores(ped){
         iconSize:[size,size], iconAnchor:[size/2,size/2]
       })
     });
-    marker.bindPopup('<div style="font-family:sans-serif;min-width:200px"><b style="font-size:13px">'+p.nombre+'</b><br><small style="color:#64748b">'+p.domicilio+'</small><br><br><b>Factura:</b> '+p.factura+'<br><b>Sucursal:</b> '+SLBL[p.sucursal]+'<br><b>Chofer:</b> '+(p.chofer||'Sin asignar')+'<br><b>Estado:</b> '+estadoIcon+p.estado+'<br><b>Fecha:</b> '+p.fecha+'<br><br><small style="color:#22c55e">📌 Podés arrastrar este punto para ajustar la ubicación</small></div>');
+    const _pid = 'mp_'+(p.factura||'').replace(/\W/g,'')+'_'+Math.random().toString(36).slice(2,6);
+    marker.bindPopup(
+      '<div style="font-family:sans-serif;min-width:210px">'+
+      '<b style="font-size:13px">'+p.nombre+'</b>'+
+      '<div style="font-size:11px;color:#64748b;margin:2px 0 8px;word-break:break-word">'+p.domicilio+'</div>'+
+      '<b>Factura:</b> '+p.factura+'<br>'+
+      '<b>Sucursal:</b> '+SLBL[p.sucursal]+'<br>'+
+      '<b>Chofer:</b> '+(p.chofer||'Sin asignar')+'<br>'+
+      '<b>Estado:</b> '+estadoIcon+p.estado+'<br>'+
+      '<b>Fecha:</b> '+p.fecha+
+      '<div style="margin-top:10px;display:flex;gap:4px">'+
+        '<input id="'+_pid+'" type="text" placeholder="Dirección o link Maps..." style="flex:1;padding:5px 7px;border:1px solid #cbd5e1;border-radius:4px;font-size:11px;outline:none;min-width:0"/>'+
+        '<button id="'+_pid+'_btn" style="background:#3b82f6;color:white;border:none;border-radius:4px;padding:5px 9px;cursor:pointer;font-size:13px;flex-shrink:0">→</button>'+
+      '</div>'+
+      '<div id="'+_pid+'_st" style="font-size:10px;color:#94a3b8;margin-top:4px;min-height:14px"></div>'+
+      '</div>'
+    );
+    marker.on('popupopen', function(){
+      const inp = document.getElementById(_pid);
+      const btn = document.getElementById(_pid+'_btn');
+      const st  = document.getElementById(_pid+'_st');
+      if(!inp || inp._bound) return;
+      inp._bound = true;
+      async function reubicar(){
+        const val = inp.value.trim();
+        if(!val) return;
+        st.textContent = 'Buscando...';
+        let lat=null, lng=null;
+        const cm = val.match(/[?&]q=(-?\d+\.\d+)(?:,|%2C)(-?\d+\.\d+)/i)||val.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+        if(cm){ lat=parseFloat(cm[1]); lng=parseFloat(cm[2]); }
+        if(!lat){
+          try{
+            const clean = limpiarDomicilio(val);
+            const url='https://maps.googleapis.com/maps/api/geocode/json?address='+encodeURIComponent(clean+sufijoCiudad(clean))+'&key=AIzaSyALq-RkPJhArUHgWf_JbjAmni1oXyw3rII';
+            const r=await fetch(url); const d=await r.json();
+            if(d.results&&d.results[0]){lat=d.results[0].geometry.location.lat;lng=d.results[0].geometry.location.lng;}
+          }catch(e){}
+        }
+        if(lat){
+          p._lat=lat; p._lng=lng;
+          marker.setLatLng([lat,lng]);
+          geoCache[p.domicilio.toLowerCase().trim()]=[lat,lng];
+          try{localStorage.setItem('martel_geo_cache',JSON.stringify(geoCache));}catch(e){}
+          st.textContent='✓ Ubicación actualizada';
+          if(fullMapInstance) fullMapInstance.panTo([lat,lng]);
+        } else {
+          st.textContent='No se encontró la dirección';
+        }
+      }
+      inp.addEventListener('keydown',function(e){if(e.key==='Enter')reubicar();});
+      btn.addEventListener('click',reubicar);
+    });
     marker.on('dragend', function(e){
       const pos = e.target.getLatLng();
       p._lat = pos.lat;
