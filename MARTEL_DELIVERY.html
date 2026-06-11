@@ -2202,6 +2202,7 @@ function cargarHistorial(cb){
 
 function abrirReportes(){
   document.getElementById('repWrap').style.display='flex';
+  _califCache = null; _califTs = 0;
   setRepPeriod('mes');
 }
 function cerrarReportes(){
