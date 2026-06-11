@@ -1643,15 +1643,26 @@ function toggleRemito(id, el){
     el.title = 'Click → completo';
     escribirRemito(p, 'descargado');
   } else if(p.remito==='descargado'){
-    // 2 → 3: descargado → completo → desaparece
-    p.remito = 'completo';
-    p.estado = 'entregado';
-    p.til = false;
-    guardarTildados();
-    escribirRemito(p, 'completo');
-    const tr = el.closest('tr');
-    if(tr){ tr.style.transition='opacity .3s'; tr.style.opacity='0'; }
-    setTimeout(function(){ if(tr) tr.remove(); }, 300);
+    const confirmar = confirm('¿Qué querés hacer con este pedido?\n\nAceptar → Marcar ENTREGADO\nCancelar → Revertir a PENDIENTE');
+    if(confirmar){
+      // descargado → entregado
+      p.remito = 'completo';
+      p.estado = 'entregado';
+      p.til = false;
+      guardarTildados();
+      escribirRemito(p, 'completo');
+      const tr = el.closest('tr');
+      if(tr){ tr.style.transition='opacity .3s'; tr.style.opacity='0'; }
+      setTimeout(function(){ if(tr) tr.remove(); }, 300);
+    } else {
+      // descargado → pendiente (reprogramar)
+      p.remito = '';
+      p.estado = 'pendiente';
+      el.className = 'est-vacio clickable';
+      el.textContent = '—';
+      el.title = 'Click → descargado';
+      escribirRemito(p, '');
+    }
   } else {
     // completo → vacío (revertir, por si hubo error)
     p.remito = '';
