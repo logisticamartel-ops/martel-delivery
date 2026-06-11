@@ -2147,6 +2147,26 @@ function formatFechaRep(s){
 
 let _historialCache = null;
 let _historialTs = 0;
+let _califCache = null;
+let _califTs = 0;
+
+function cargarCalificaciones(cb){
+  const ahora = Date.now();
+  if(_califCache && ahora - _califTs < 5*60*1000){ cb(_califCache); return; }
+  const cbName = '_cal_'+ahora;
+  const sc = document.createElement('script');
+  let done = false;
+  const timer = setTimeout(function(){ if(done) return; done=true; delete window[cbName]; sc.remove(); cb([]); }, 8000);
+  window[cbName] = function(data){
+    if(done) return; done=true; clearTimeout(timer); delete window[cbName]; sc.remove();
+    _califCache = (data.ok && data.calificaciones) ? data.calificaciones : [];
+    _califTs = Date.now();
+    cb(_califCache);
+  };
+  sc.onerror = function(){ if(done) return; done=true; clearTimeout(timer); delete window[cbName]; sc.remove(); cb([]); };
+  sc.src = GAS_URL+'?'+new URLSearchParams({action:'get_calificaciones',callback:cbName}).toString();
+  document.head.appendChild(sc);
+}
 
 function cargarHistorial(cb){
   const ahora = Date.now();
@@ -2248,20 +2268,44 @@ function renderReporte(){
 
   // Mostrar inmediatamente con datos actuales
   const immediato = buildPed(_historialCache || []);
-  _renderReporteConDatos(immediato.ped, dDesde, dHasta, immediato.histTotal);
+  _renderReporteConDatos(immediato.ped, dDesde, dHasta, immediato.histTotal, _califCache||[]);
 
-  // Si el historial no está en cache, cargarlo y actualizar
-  if(!_historialCache){
-    cargarHistorial(function(historial){
-      const actualizado = buildPed(historial);
-      _renderReporteConDatos(actualizado.ped, dDesde, dHasta, actualizado.histTotal);
-    });
+  // Cargar historial y calificaciones en background si no están en cache
+  if(!_historialCache || !_califCache){
+    let histResult = _historialCache;
+    let califResult = _califCache;
+    function intentarRender(){
+      if(histResult !== null && califResult !== null){
+        const actualizado = buildPed(histResult);
+        _renderReporteConDatos(actualizado.ped, dDesde, dHasta, actualizado.histTotal, califResult);
+      }
+    }
+    if(!_historialCache){
+      cargarHistorial(function(h){ histResult=h; intentarRender(); });
+    }
+    if(!_califCache){
+      cargarCalificaciones(function(c){ califResult=c; intentarRender(); });
+    }
   }
 }
 
-function _renderReporteConDatos(ped, dDesde, dHasta, histTotal){
+function _renderReporteConDatos(ped, dDesde, dHasta, histTotal, califs){
   const desde = dDesde.toISOString().split('T')[0];
   const hasta = dHasta.toISOString().split('T')[0];
+  // Calcular promedio de estrellas por chofer en el período
+  const califPorChofer = {};
+  (califs||[]).forEach(function(c){
+    if(!c.chofer) return;
+    const fd = (c.fecha||'').split(' ')[0]; // dd/MM/yyyy
+    const parts = fd.split('/');
+    if(parts.length===3){
+      const iso = parts[2]+'-'+parts[1]+'-'+parts[0];
+      if(iso < desde || iso > hasta) return;
+    }
+    if(!califPorChofer[c.chofer]) califPorChofer[c.chofer] = {sum:0,cnt:0};
+    califPorChofer[c.chofer].sum += parseInt(c.estrellas)||0;
+    califPorChofer[c.chofer].cnt++;
+  });
   if(ped.length === 0){
     document.getElementById('repContent').innerHTML = 
       '<p style="color:var(--muted);text-align:center;padding:60px;font-size:14px">No hay pedidos en el período seleccionado</p>';
@@ -2345,18 +2389,22 @@ function _renderReporteConDatos(ped, dDesde, dHasta, histTotal){
       </div>
       <table class="rep-tbl">
         <thead><tr>
-          <th>Chofer</th><th>Total</th><th>Pendiente</th><th>Descargado</th><th>Entregado</th><th>Sucursales</th><th>Carga relativa</th>
+          <th>Chofer</th><th>Total</th><th>Pendiente</th><th>Descargado</th><th>Entregado</th><th>⭐ Promedio</th><th>Sucursales</th><th>Carga relativa</th>
         </tr></thead>
         <tbody>
           ${CHOFERES.filter(ch=>porChofer[ch]&&porChofer[ch].total>0).sort((a,b)=>porChofer[b].total-porChofer[a].total).map(ch => {
             const d = porChofer[ch];
             const barW = maxChofer>0 ? Math.round((d.total/maxChofer)*120) : 0;
+            const cal = califPorChofer[ch];
+            const prom = cal && cal.cnt>0 ? (cal.sum/cal.cnt).toFixed(1) : null;
+            const promHtml = prom ? `<span style="color:#f59e0b;font-weight:700">${prom}</span> <span style="font-size:10px;color:var(--muted)">(${cal.cnt})</span>` : '<span style="color:var(--muted);font-size:11px">—</span>';
             return `<tr>
               <td><span class="ch-pill" style="background:${CCOLORS[ch]||'#94a3b8'}"></span><b>${ch.charAt(0).toUpperCase()+ch.slice(1)}</b></td>
               <td class="mono" style="font-size:16px;font-weight:700">${d.total}</td>
               <td class="mono" style="color:var(--amber)">${d.pendiente||0}</td>
               <td class="mono" style="color:var(--cyan)">${d.descargado||0}</td>
               <td class="mono" style="color:var(--green)">${d.entregado||0}</td>
+              <td class="mono">${promHtml}</td>
               <td style="font-size:11px;color:var(--muted)">${[...d.sucursales].join(', ')}</td>
               <td><span class="bar-mini" style="width:${barW}px"></span></td>
             </tr>`;

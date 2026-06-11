@@ -47,6 +47,14 @@ body{background:#0F172A;color:#E5E7EB;font-family:'IBM Plex Sans',sans-serif;min
 /* Loading / error */
 .loading{text-align:center;padding:40px;color:#94A3B8;font-size:14px}
 .error{text-align:center;padding:40px;color:#f87171;font-size:14px}
+/* Rating */
+.rating-box{background:#1E293B;border:1px solid rgba(148,163,184,.1);border-radius:10px;padding:18px 16px;text-align:center;margin-top:16px}
+.rating-title{font-size:13px;font-weight:600;color:#E5E7EB;margin-bottom:14px}
+.stars{display:flex;justify-content:center;gap:4px;margin-bottom:8px}
+.star-btn{background:none;border:none;font-size:38px;cursor:pointer;padding:2px;line-height:1;color:#f59e0b;transition:transform .1s}
+.star-btn:active{transform:scale(1.25)}
+.star-btn:disabled{cursor:default}
+.rating-msg{font-size:12px;color:#94A3B8;min-height:18px}
 </style>
 </head>
 <body>
@@ -97,6 +105,45 @@ if(!factura){
   document.head.appendChild(sc);
 }
 
+let _choferKey = null;
+
+function _mostrarEstrellas(n, bloqueado){
+  for(let i=1;i<=5;i++){
+    const b=document.getElementById('s'+i);
+    if(!b) return;
+    b.textContent = i<=n ? '★' : '☆';
+    if(bloqueado) b.disabled = true;
+  }
+}
+
+function _initRating(choferKey){
+  _choferKey = choferKey || null;
+  const prev = localStorage.getItem('rated_'+factura+'_'+(sucursal||''));
+  if(prev){
+    _mostrarEstrellas(parseInt(prev), true);
+    const msg=document.getElementById('ratingMsg');
+    if(msg) msg.textContent='¡Gracias! Ya calificaste esta entrega.';
+  }
+}
+
+function calificar(n){
+  const key='rated_'+factura+'_'+(sucursal||'');
+  if(localStorage.getItem(key)) return;
+  _mostrarEstrellas(n, true);
+  const msg=document.getElementById('ratingMsg');
+  if(msg) msg.textContent='Enviando...';
+  const cb='_rate_'+Date.now();
+  const sc=document.createElement('script');
+  const guardar=function(){
+    localStorage.setItem(key,String(n));
+    if(msg) msg.textContent='¡Gracias por tu calificación! ⭐';
+  };
+  window[cb]=function(){ delete window[cb]; sc.remove(); guardar(); };
+  sc.onerror=function(){ delete window[cb]; sc.remove(); guardar(); };
+  sc.src=GAS_URL+'?'+new URLSearchParams({action:'rate_delivery',factura:factura||'',sucursal:sucursal||'',chofer:_choferKey||'',estrellas:n,callback:cb}).toString();
+  document.head.appendChild(sc);
+}
+
 function renderPedido(d){
   const estado = d.remito==='descargado' ? 'descargado' : d.estado==='entregado' ? 'entregado' : 'pendiente';
   const step1 = true;
@@ -128,6 +175,18 @@ function renderPedido(d){
       </div>
     </div>
     <div class="${estadoClass} estado-badge">${estadoTexto}</div>
+    ${step3 ? `
+    <div class="rating-box" id="ratingBox">
+      <div class="rating-title">¿Cómo fue tu entrega?</div>
+      <div class="stars">
+        <button class="star-btn" onclick="calificar(1)" id="s1">☆</button>
+        <button class="star-btn" onclick="calificar(2)" id="s2">☆</button>
+        <button class="star-btn" onclick="calificar(3)" id="s3">☆</button>
+        <button class="star-btn" onclick="calificar(4)" id="s4">☆</button>
+        <button class="star-btn" onclick="calificar(5)" id="s5">☆</button>
+      </div>
+      <div class="rating-msg" id="ratingMsg">Tocá para calificar el servicio</div>
+    </div>` : ''}
     ${choferNombre && !step3 ? `
     <div class="chofer-box">
       <div class="chofer-icon">🚛</div>
@@ -145,6 +204,7 @@ function renderPedido(d){
       Escribirle a ${choferNombre}
     </a>` : ''}` : ''}
   `;
+  if(step3) _initRating(d.chofer);
 }
 </script>
 </body>
