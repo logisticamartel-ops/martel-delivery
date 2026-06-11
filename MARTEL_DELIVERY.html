@@ -881,7 +881,7 @@ function confirmarLoginPass(){
     if(_loginTargetSuc === 'admin'){
       sesionRol = null;
       document.getElementById('loginOverlay').style.display = 'none';
-      setTimeout(sincronizarActual, 300);
+      setTimeout(sincronizarTodas, 300);
     } else {
       sesionRol = _loginTargetSuc;
       document.getElementById('loginOverlay').style.display = 'none';
@@ -2415,6 +2415,7 @@ function _renderReporteConDatos(ped, dDesde, dHasta, histTotal, califs){
             <td class="mono" style="color:var(--amber)">${porChofer['sin_asignar'].pendiente||0}</td>
             <td class="mono">${porChofer['sin_asignar'].descargado||0}</td>
             <td class="mono">${porChofer['sin_asignar'].entregado||0}</td>
+            <td><span style="color:var(--muted);font-size:11px">—</span></td>
             <td style="font-size:11px;color:var(--muted)">${[...porChofer['sin_asignar'].sucursales].join(', ')}</td>
             <td></td>
           </tr>` : ''}
