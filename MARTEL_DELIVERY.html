@@ -1786,6 +1786,7 @@ function _buildMsgChofer(ch){
     txt += (i+1)+'️⃣ *'+p.nombre+'*\n';
     txt += '   📋 '+p.factura+'\n';
     txt += '   📍 '+domMsg+'\n';
+    txt += '   🗺️ https://maps.google.com/?q='+encodeURIComponent(domMsg+' Salta Argentina')+'\n';
     if(telExtraido) txt += '   📞 '+telExtraido+'\n';
     txt += '   🏪 '+SLBL[p.sucursal]+'\n\n';
   });
