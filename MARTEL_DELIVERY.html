@@ -1480,7 +1480,7 @@ function enviarSeguimiento(id){
   const telChoferFmt = telChofer ? telChofer.replace('549','0').replace(/(\d{3})(\d{3})(\d{4})/,'$1-$2-$3') : '';
   let msg = `Hola ${p.nombre}! 👋\n\nTu pedido de *Martel Pinturerias* está en camino 🚚\n\nSeguí el estado de tu entrega acá:\n${link}`;
   if(choferNombre) msg += `\n\nTu repartidor es *${choferNombre}*`;
-  if(telChoferFmt) msg += ` 📞 ${telChoferFmt}`;
+  if(telChoferFmt) msg += ` 📞 ${telChoferFmt}\n_Por cualquier consulta escribile directamente._`;
   const url = 'https://wa.me/'+tel+'?text='+encodeURIComponent(msg);
   window.open(url,'_blank');
   _wspSent[_wspKey(p)] = true;
