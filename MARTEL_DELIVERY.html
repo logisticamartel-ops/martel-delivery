@@ -1783,7 +1783,8 @@ function _buildMsgChofer(ch){
       .replace(/\s+/g, ' ').trim();
     domMsg = domMsg.split(/\s+[-–—]\s+|\s*,\s+(?=[A-Z])/)[0].trim();
     domMsg = domMsg.replace(/\b(\w+(?:\s+\w+){0,2})\s+\1\b/gi, '$1').trim();
-    txt += (i+1)+'️⃣ *'+p.nombre+'*\n';
+    const esRetiro = /retir/i.test(domRaw) || /retir/i.test(p.observaciones||'');
+    txt += (i+1)+'️⃣ *'+p.nombre+'*'+(esRetiro ? '  🔄 *RETIRAR*' : '')+'\n';
     txt += '   📋 '+p.factura+'\n';
     txt += '   📍 '+domMsg+'\n';
     txt += '   🗺️ https://maps.google.com/?q='+encodeURIComponent(domMsg+' Salta Argentina')+'\n';
