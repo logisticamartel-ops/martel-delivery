@@ -1782,11 +1782,12 @@ function _buildMsgChofer(ch){
       .replace(/\b\d{7,}\b/g, '')
       .replace(/\s+/g, ' ').trim();
     domMsg = domMsg.replace(/\b(\w+(?:\s+\w+){0,2})\s+\1\b/gi, '$1').trim();
+    const domMaps = domMsg.split(/\s+[-–—]\s+|\s*[-–—]\s*(?:llamar|avisar|retirar|coordinar|solo|enviar|cel|tel)\b/i)[0].trim();
     const esRetiro = /retir/i.test(domRaw) || /retir/i.test(p.observaciones||'');
     txt += (i+1)+'️⃣ *'+p.nombre+'*'+(esRetiro ? '  🔄 *RETIRAR*' : '')+'\n';
     txt += '   📋 '+p.factura+'\n';
     txt += '   📍 '+domMsg+'\n';
-    txt += '   🗺️ https://maps.google.com/?q='+encodeURIComponent(domMsg+' Salta Argentina')+'\n';
+    txt += '   🗺️ https://maps.google.com/?q='+encodeURIComponent(domMaps+' Salta Argentina')+'\n';
     if(telExtraido) txt += '   📞 '+telExtraido+'\n';
     txt += '   🏪 '+SLBL[p.sucursal]+'\n\n';
   });
