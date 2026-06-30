@@ -1558,8 +1558,14 @@ function asgCh(id,ch,sel){
   escribirChofer(p,ch);
 }
 function escribirChofer(p,chofer){
-  const params=new URLSearchParams({action:'write_chofer',sucursal:p.sucursal,cliente:p.cliente,factura:p.factura,chofer:chofer||''});
-  const img=new Image(); img.src=GAS_URL+'?'+params.toString();
+  const cb='_wch_'+Date.now();
+  const params=new URLSearchParams({action:'write_chofer',sucursal:p.sucursal,cliente:p.cliente,factura:p.factura,chofer:chofer||'',callback:cb});
+  const sc=document.createElement('script');
+  const timer=setTimeout(function(){ delete window[cb]; sc.remove(); showToast('⚠ Sin respuesta al guardar chofer — reintentando...'); escribirChofer(p,chofer); },12000);
+  window[cb]=function(data){ clearTimeout(timer); delete window[cb]; sc.remove(); if(!data||!data.ok) showToast('⚠ Error al guardar chofer ('+p.factura+')'); };
+  sc.onerror=function(){ clearTimeout(timer); delete window[cb]; sc.remove(); showToast('⚠ Sin conexión al guardar chofer'); };
+  sc.src=GAS_URL+'?'+params.toString();
+  document.head.appendChild(sc);
 }
 function updBtn(){
   const n=ALL.filter(p=>p.til).length;
@@ -1622,16 +1628,17 @@ function toggleZona(){
 }
 
 function escribirRemito(p, valor){
-  const params = new URLSearchParams({
-    action:   'write',
-    sucursal: p.sucursal,
-    cliente:  p.cliente,
-    factura:  p.factura,
-    remito:   valor
-  });
-  // Usar Image() en lugar de fetch — funciona desde file:// sin restricciones CORS
-  const img = new Image();
-  img.src = GAS_URL + '?' + params.toString();
+  const cb = '_wr_'+Date.now();
+  const params = new URLSearchParams({action:'write',sucursal:p.sucursal,cliente:p.cliente,factura:p.factura,remito:valor,callback:cb});
+  const sc = document.createElement('script');
+  const timer = setTimeout(function(){ delete window[cb]; sc.remove(); showToast('⚠ Sin respuesta al guardar remito — reintentando...'); escribirRemito(p,valor); }, 12000);
+  window[cb] = function(data){
+    clearTimeout(timer); delete window[cb]; sc.remove();
+    if(!data||!data.ok) showToast('⚠ Error al guardar en planilla ('+p.factura+')');
+  };
+  sc.onerror = function(){ clearTimeout(timer); delete window[cb]; sc.remove(); showToast('⚠ Sin conexión al guardar remito'); };
+  sc.src = GAS_URL+'?'+params.toString();
+  document.head.appendChild(sc);
 }
 
 function toggleRemito(id, el){
