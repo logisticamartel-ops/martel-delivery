@@ -1033,6 +1033,8 @@ function procesarDatosGAS(filas, sucursal){
     const cargadoFinal = tsSheets || (existing ? existing._cargadoEn : null) || null;
     const telefonoSheets = f.length > 9 ? String(f[9]||'').trim() : '';
     const observSheets = f.length > 10 ? String(f[10]||'').trim() : '';
+    // Evitar duplicados dentro del mismo sync (misma factura ya procesada)
+    if(facStr && nuevos.some(function(x){ return x.factura===facStr && x.cliente===cliStr; })) continue;
     nuevos.push({id:uid++,cliente:cliStr,nombre:nombre,
       factura:facStr,domicilio:domicilio,fecha:fechaDisplay,
       sucursal:sucursal,chofer:choferFinal,
