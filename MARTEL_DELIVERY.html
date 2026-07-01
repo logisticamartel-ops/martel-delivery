@@ -2318,8 +2318,9 @@ function renderReporte(){
 }
 
 function _renderReporteConDatos(ped, dDesde, dHasta, histTotal, califs){
-  const desde = dDesde.toISOString().split('T')[0];
-  const hasta = dHasta.toISOString().split('T')[0];
+  const _fmt2 = n => String(n).padStart(2,'0');
+  const desde = dDesde.getFullYear()+'-'+_fmt2(dDesde.getMonth()+1)+'-'+_fmt2(dDesde.getDate());
+  const hasta = dHasta.getFullYear()+'-'+_fmt2(dHasta.getMonth()+1)+'-'+_fmt2(dHasta.getDate());
   // Calcular promedio de estrellas por chofer en el período
   const califPorChofer = {};
   (califs||[]).forEach(function(c){
