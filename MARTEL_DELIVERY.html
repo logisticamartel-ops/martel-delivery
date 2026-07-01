@@ -2241,7 +2241,7 @@ function setRepPeriod(p){
   const btn = document.getElementById('rq-'+p);
   if(btn) btn.classList.add('active');
   const hoy = new Date();
-  const fmt = d => d.toISOString().split('T')[0];
+  const fmt = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   const desdeEl = document.getElementById('repDesde');
   const hastaEl = document.getElementById('repHasta');
   if(p==='hoy'){
