@@ -2495,7 +2495,8 @@ function _renderReporteConDatos(ped, dDesde, dHasta, histTotal, califs){
 function abrirCarga(sucParam){
   document.getElementById('modalCarga').style.display='flex';
   // Setear fecha de hoy por defecto
-  const hoy = new Date().toISOString().split('T')[0];
+  const _hoyC = new Date();
+  const hoy = _hoyC.getFullYear()+'-'+String(_hoyC.getMonth()+1).padStart(2,'0')+'-'+String(_hoyC.getDate()).padStart(2,'0');
   document.getElementById('cFecha').value = hoy;
   // Limpiar campos
   ['cCliente','cFactura','cNombre','cDireccion','cTelefono','cObservaciones','cTelObs'].forEach(id=>{
@@ -2732,7 +2733,8 @@ function _poblarVehiculos(){
     sel.appendChild(opt);
   });
   // Fecha de hoy por defecto
-  const hoy = new Date().toISOString().split('T')[0];
+  const _hoyH = new Date();
+  const hoy = _hoyH.getFullYear()+'-'+String(_hoyH.getMonth()+1).padStart(2,'0')+'-'+String(_hoyH.getDate()).padStart(2,'0');
   document.getElementById('histFecha').value = hoy;
 }
 
