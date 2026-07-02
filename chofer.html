@@ -109,7 +109,7 @@ function renderPedidos() {
   document.getElementById('countLabel').textContent =
     pendientes + ' pedido' + (pendientes !== 1 ? 's' : '') + ' pendiente' + (pendientes !== 1 ? 's' : '');
 
-  if (!pedidosData.length) {
+  if (!pedidosData.length || pendientes === 0) {
     document.getElementById('content').innerHTML = '<div class="empty">✅ No tenés pedidos<br>pendientes por entregar.</div>';
     return;
   }
