@@ -942,7 +942,7 @@ const DEMO=[
 const GAS_URL ='https://script.google.com/macros/s/AKfycbxm3n6KkUw0uh7vB3NAhvm62joWgKP_464HesgkPaWLfc4z2yqz4S0eFLj7Kmy8qV4W/exec';
 const MAPS_RE = /(?:https?:\/\/)?(?:maps\.app\.goo\.gl|goo\.gl\/maps|maps\.google\.com|(?:www\.)?google\.com\/maps)[^\s]*/i;
 
-function _ejecutarSync(btnId, labelBusy, labelOk, onOk, silentError){
+function _ejecutarSync(btnId, labelBusy, labelOk, onOk, silentError, sucursal){
   const btn = document.getElementById(btnId);
   if(btn){ btn.textContent=labelBusy; btn.disabled=true; }
   const labelDefault = '🔄 '+(btnId==='btnSyncAll'?'Sync todas':'Sincronizar');
@@ -955,7 +955,7 @@ function _ejecutarSync(btnId, labelBusy, labelOk, onOk, silentError){
   }, function(){
     if(btn){ btn.textContent=labelDefault; btn.disabled=false; }
     if(!silentError) showToast('⚠ Sin respuesta del servidor');
-  });
+  }, sucursal);
 }
 
 function sincronizarTodas(){
@@ -968,15 +968,17 @@ function sincronizarActual(){
   if(!suc||suc==='todas'){ alert('Seleccioná una sucursal primero.'); return; }
   _ejecutarSync('btnSync','⏳ Cargando...','✓ '+SLBL[suc]+': ',function(data){
     return data[suc]?procesarDatosGAS(data[suc],suc):0;
-  });
+  }, false, suc);
 }
 
-function _llamarGAS(onOk, onErr){
+function _llamarGAS(onOk, onErr, sucursal){
   let done=false;
+  const timeout = sucursal ? 30000 : 90000;
   const timer=setTimeout(function(){
     if(done) return; done=true; onErr();
-  }, 90000);
-  fetch(GAS_URL, {cache:'no-store'})
+  }, timeout);
+  const url = sucursal ? GAS_URL+'?sucursal='+encodeURIComponent(sucursal) : GAS_URL;
+  fetch(url, {cache:'no-store'})
     .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
     .then(function(data){ if(done) return; done=true; clearTimeout(timer); onOk(data); })
     .catch(function(){ if(done) return; done=true; clearTimeout(timer); onErr(); });
