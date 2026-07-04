@@ -1838,7 +1838,9 @@ function copiarMensajeWsp(ch){
 }
 
 function copiarMensajeQR(){
-  navigator.clipboard.writeText(_qrMensaje).then(function(){ showToast('Mensaje copiado'); });
+  navigator.clipboard.writeText(_qrMensaje).then(function(){ showToast('Mensaje copiado'); }).catch(function(){
+    const ta=document.createElement('textarea'); ta.value=_qrMensaje; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); showToast('Mensaje copiado');
+  });
 }
 
 
@@ -2986,15 +2988,18 @@ initResizableCols();
     btn.textContent = `🔄 Sync todas (${min}:${String(seg).padStart(2,'0')})`;
   }
 
-  // Countdown visual cada segundo
+  // Countdown visual cada segundo — no sobreescribe si el sync está en curso
   setInterval(function(){
     countdown--;
     if(countdown < 0) countdown = INTERVALO / 1000;
-    actualizarLabel();
+    const btn = document.getElementById('btnSyncAll');
+    if(btn && !btn.disabled) actualizarLabel();
   }, 1000);
 
-  // Sync real cada SYNC_INTERVAL_MS
+  // Sync real cada SYNC_INTERVAL_MS — guard para no disparar si ya hay uno en curso
   setInterval(function(){
+    const btn = document.getElementById('btnSyncAll');
+    if(btn && btn.disabled) return;
     countdown = INTERVALO / 1000;
     _ejecutarSync('btnSyncAll','⏳ Sincronizando...','🔄 Auto-sync: ',function(data){
       let n=0; SUCS.forEach(function(s){ if(data[s]) n+=procesarDatosGAS(data[s],s); }); return n;
