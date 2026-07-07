@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
 <title>Mis Entregas — Martel</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
@@ -84,23 +87,47 @@ if (!choferKey) {
 
 let pedidosData = [];
 
+function errorConReintento(msg) {
+  document.getElementById('content').innerHTML =
+    '<div class="error">' + msg +
+    '<br><br><button onclick="cargarPedidos()" style="padding:12px 28px;background:#22c55e;border:none;border-radius:8px;color:white;font-size:15px;font-weight:700;cursor:pointer">↻ Reintentar</button>' +
+    '</div>';
+}
+
 function cargarPedidos() {
   document.getElementById('content').innerHTML = '<div class="loading">Cargando pedidos...</div>';
   const cb = '_ch_' + Date.now();
   const sc = document.createElement('script');
+  let finished = false;
+  function limpiar() {
+    clearTimeout(to);
+    try { delete window[cb]; } catch(e) {}
+    if (sc.parentNode) sc.remove();
+  }
+  const to = setTimeout(function() {
+    if (finished) return;
+    finished = true;
+    limpiar();
+    errorConReintento('La carga está tardando demasiado.<br>Revisá tu conexión a internet.');
+  }, 15000);
   sc.onerror = function() {
-    document.getElementById('content').innerHTML = '<div class="error">No se pudo conectar.<br>Tocá ↻ para reintentar.</div>';
+    if (finished) return;
+    finished = true;
+    limpiar();
+    errorConReintento('No se pudo conectar.');
   };
   window[cb] = function(data) {
-    delete window[cb]; sc.remove();
+    if (finished) return;
+    finished = true;
+    limpiar();
     if (!data || !data.ok) {
-      document.getElementById('content').innerHTML = '<div class="error">Error al cargar pedidos.</div>';
+      errorConReintento('Error al cargar pedidos.');
       return;
     }
     pedidosData = (data.pedidos || []).map(function(p){ return Object.assign({}, p, {_done: false}); });
     renderPedidos();
   };
-  sc.src = GAS_URL + '?' + new URLSearchParams({action:'get_chofer_pedidos', chofer:choferKey, callback:cb}).toString();
+  sc.src = GAS_URL + '?' + new URLSearchParams({action:'get_chofer_pedidos', chofer:choferKey, callback:cb, _:Date.now()}).toString();
   document.head.appendChild(sc);
 }
 
