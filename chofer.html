@@ -94,8 +94,11 @@ function errorConReintento(msg) {
     '</div>';
 }
 
-function cargarPedidos() {
-  document.getElementById('content').innerHTML = '<div class="loading">Cargando pedidos...</div>';
+function cargarPedidos(_intento) {
+  const intento = _intento || 1;
+  const MAX_INTENTOS = 3;
+  document.getElementById('content').innerHTML =
+    '<div class="loading">Cargando pedidos...' + (intento > 1 ? '<br><small>(reintentando ' + intento + '/' + MAX_INTENTOS + ')</small>' : '') + '</div>';
   const cb = '_ch_' + Date.now();
   const sc = document.createElement('script');
   let finished = false;
@@ -104,26 +107,32 @@ function cargarPedidos() {
     try { delete window[cb]; } catch(e) {}
     if (sc.parentNode) sc.remove();
   }
-  const to = setTimeout(function() {
+  // El GAS es lento y suele fallar el primer intento (arranque en frio):
+  // reintentamos solos hasta MAX_INTENTOS antes de molestar al chofer.
+  function fallar(msgFinal) {
     if (finished) return;
     finished = true;
     limpiar();
-    errorConReintento('La carga está tardando demasiado.<br>Revisá tu conexión a internet.');
+    if (intento < MAX_INTENTOS) {
+      setTimeout(function() { cargarPedidos(intento + 1); }, 1500);
+    } else {
+      errorConReintento(msgFinal);
+    }
+  }
+  const to = setTimeout(function() {
+    fallar('La carga está tardando demasiado.<br>Revisá tu conexión a internet.');
   }, 35000);
   sc.onerror = function() {
-    if (finished) return;
-    finished = true;
-    limpiar();
-    errorConReintento('No se pudo conectar.');
+    fallar('No se pudo conectar.');
   };
   window[cb] = function(data) {
     if (finished) return;
-    finished = true;
-    limpiar();
     if (!data || !data.ok) {
-      errorConReintento('Error al cargar pedidos.');
+      fallar('Error al cargar pedidos.');
       return;
     }
+    finished = true;
+    limpiar();
     pedidosData = (data.pedidos || []).map(function(p){ return Object.assign({}, p, {_done: false}); });
     renderPedidos();
   };
