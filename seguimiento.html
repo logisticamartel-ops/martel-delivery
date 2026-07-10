@@ -31,6 +31,7 @@ body{background:#0F172A;color:#E5E7EB;font-family:'IBM Plex Sans',sans-serif;min
 .estado-badge{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;margin-bottom:20px}
 .estado-pendiente{background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.3)}
 .estado-descargado{background:rgba(6,182,212,.12);color:#06b6d4;border:1px solid rgba(6,182,212,.3)}
+.estado-encamino{background:rgba(6,182,212,.12);color:#06b6d4;border:1px solid rgba(6,182,212,.3)}
 .estado-entregado{background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.3)}
 /* Chofer */
 .chofer-box{background:#1E293B;border:1px solid rgba(148,163,184,.1);border-radius:8px;padding:14px 16px;display:flex;align-items:center;gap:12px}
@@ -145,11 +146,11 @@ function calificar(n){
 }
 
 function renderPedido(d){
-  const estado = d.remito==='descargado' ? 'descargado' : d.estado==='entregado' ? 'entregado' : 'pendiente';
+  const estado = d.estado==='entregado' ? 'entregado' : d.remito==='en camino' ? 'encamino' : 'pendiente';
   const step1 = true;
-  const step2 = estado==='descargado'||estado==='entregado';
+  const step2 = estado==='encamino'||estado==='entregado';
   const step3 = estado==='entregado';
-  const estadoTexto = estado==='pendiente'?'⏳ En preparación':estado==='descargado'?'🚚 En camino':'✅ Entregado';
+  const estadoTexto = estado==='encamino'?'🚗 En camino a tu domicilio':estado==='entregado'?'✅ Entregado':'⏳ En preparación';
   const estadoClass = 'estado-'+estado;
   const choferNombre = d.chofer ? (CHOFERES_NOMBRES[d.chofer]||d.chofer) : null;
   const choferTel = d.chofer ? CHOFERES_TEL[d.chofer] : null;

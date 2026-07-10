@@ -25,6 +25,10 @@ body{background:#0F172A;color:#E5E7EB;font-family:'IBM Plex Sans',sans-serif;min
 .card-factura{font-size:11px;color:#475569;font-family:monospace;margin-bottom:14px}
 .btn-entregar{width:100%;padding:13px;background:#22c55e;border:none;border-radius:8px;color:white;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.03em}
 .btn-entregar:active{background:#16a34a;transform:scale(.98)}
+.btn-camino{width:100%;padding:13px;background:#06b6d4;border:none;border-radius:8px;color:white;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.03em;margin-bottom:10px}
+.btn-camino:active{background:#0891b2;transform:scale(.98)}
+.btn-camino:disabled{opacity:.6}
+.camino-ok{text-align:center;color:#06b6d4;font-weight:600;font-size:13px;padding:4px 0 12px}
 .card-done-label{text-align:center;color:#22c55e;font-weight:600;font-size:14px;padding:6px 0}
 /* Modal */
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
@@ -152,10 +156,14 @@ function renderPedidos() {
 
   document.getElementById('content').innerHTML = pedidosData.map(function(p, i) {
     if (p._done) return '';
+    var camino = (p.remito === 'en camino')
+      ? '<div class="camino-ok">🚗 Avisaste: en camino a domicilio</div>'
+      : '<button class="btn-camino" onclick="marcarEnCamino(' + i + ')">🚗 En camino a tu domicilio</button>';
     return '<div class="card" id="card-' + i + '">' +
       '<div class="card-nombre">' + esc(p.nombre) + '</div>' +
       '<div class="card-dir">' + esc(p.domicilio) + '</div>' +
       '<div class="card-factura">Factura: ' + esc(p.factura) + ' · ' + esc(p.sucursal) + '</div>' +
+      camino +
       '<button class="btn-entregar" onclick="abrirModal(' + i + ')">📦 Marcar entregado</button>' +
       '</div>';
   }).join('');
@@ -174,6 +182,54 @@ function abrirModal(i) {
 
 function cerrarModal() {
   document.getElementById('modal').style.display = 'none';
+}
+
+function marcarEnCamino(i) {
+  const p = pedidosData[i];
+  const card = document.getElementById('card-' + i);
+  const btn = card ? card.querySelector('.btn-camino') : null;
+  function restaurar() { if (btn) { btn.textContent = '🚗 En camino a tu domicilio'; btn.disabled = false; } }
+  if (btn) { btn.textContent = '⏳ Avisando...'; btn.disabled = true; }
+
+  const cb = '_ec_' + Date.now();
+  const sc = document.createElement('script');
+  let hecho = false;
+  function limpiar() {
+    clearTimeout(to);
+    try { delete window[cb]; } catch(e) {}
+    if (sc.parentNode) sc.remove();
+  }
+  const to = setTimeout(function() {
+    if (hecho) return;
+    hecho = true; limpiar(); restaurar();
+    alert('El servidor tardó demasiado. No se pudo avisar al cliente.\nReintentá en unos segundos.');
+  }, 35000);
+  window[cb] = function(data) {
+    if (hecho) return;
+    hecho = true; limpiar();
+    if (data && data.ok) {
+      pedidosData[i].remito = 'en camino';
+      renderPedidos();
+    } else {
+      restaurar();
+      alert('No se pudo avisar al cliente' + (data && data.error ? ':\n' + data.error : '.') + '\nReintentá.');
+    }
+  };
+  sc.onerror = function() {
+    if (hecho) return;
+    hecho = true; limpiar(); restaurar();
+    alert('No hay conexión. No se pudo avisar.\nReintentá cuando tengas señal.');
+  };
+  sc.src = GAS_URL + '?' + new URLSearchParams({
+    action: 'write',
+    sucursal: p.sucursal,
+    cliente: p.cliente,
+    factura: p.factura,
+    remito: 'en camino',
+    callback: cb,
+    _: Date.now()
+  }).toString();
+  document.head.appendChild(sc);
 }
 
 function marcarEntregado(i) {
