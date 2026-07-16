@@ -2915,19 +2915,51 @@ function etUpdateMap(positions) {
   });
 }
 
+// Trae el token de EasyTrack solo desde el GAS (login server-side, sin pegar nada a mano)
+async function etFetchToken() {
+  try {
+    const res = await fetch(GAS_URL + '?action=easytrack_token&_=' + Date.now(), {cache:'no-store'});
+    const data = await res.json();
+    if (data && data.ok && data.jwt) {
+      etToken = data.jwt;
+      try { localStorage.setItem('et_jwt_manual', etToken); } catch(e) {}
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+function etTokenValido() {
+  return etToken && etJwtExp(etToken) > Date.now() + 120000;
+}
+
+async function etAsegurarToken() {
+  if (etTokenValido()) return true;
+  return await etFetchToken();
+}
+
+function etAplicar(positions) {
+  etLastPositions = positions;
+  positions.forEach(function(p){ const d=p.domain_veh||p.domain; if(d && p.vehicle_id) etVehicleIds[d]=p.vehicle_id; });
+  etUpdateMap(positions);
+  _etBadge('on');
+}
+
 async function etPoll() {
   try {
-    const positions = await etPositionsDirect();
-    etLastPositions = positions;
-    positions.forEach(function(p){ const d=p.domain_veh||p.domain; if(d && p.vehicle_id) etVehicleIds[d]=p.vehicle_id; });
-    etUpdateMap(positions);
-    _etBadge('on');
+    await etAsegurarToken();
+    etAplicar(await etPositionsDirect());
   } catch(err) {
+    // el token pudo vencer: pido uno nuevo al GAS y reintento una vez
+    if (await etFetchToken()) {
+      try { etAplicar(await etPositionsDirect()); return; } catch(e2) {}
+    }
     _etBadge('err');
   }
 }
 
 async function iniciarEasyTrack() {
+  await etAsegurarToken();
   await etPoll();
   if (etInterval) clearInterval(etInterval);
   etInterval = setInterval(etPoll, ET_POLL);
