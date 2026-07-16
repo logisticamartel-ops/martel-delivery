@@ -1,0 +1,714 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>LogixOps — Control Tower</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg?v=1"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+<style>
+/* ── RESET & TOKENS ─────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg0:#07090f;
+  --bg1:#0c0f1a;
+  --bg2:#111624;
+  --bg3:#181e30;
+  --border:#1e2840;
+  --border2:#253050;
+  --cyan:#00d4e8;
+  --cyan-dim:#009db0;
+  --cyan-glow:rgba(0,212,232,.18);
+  --amber:#f5a623;
+  --amber-dim:#b87d1a;
+  --red:#ff4757;
+  --red-dim:#c0392b;
+  --green:#2ecc71;
+  --text-primary:#e8edf5;
+  --text-secondary:#7a8aaa;
+  --text-mono:#00d4e8;
+  --font-ui:'Barlow Condensed',sans-serif;
+  --font-mono:'Share Tech Mono',monospace;
+  --font-head:'Rajdhani',sans-serif;
+  --r:6px;
+  --r-lg:10px;
+  --shadow:0 4px 24px rgba(0,0,0,.5);
+}
+
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg0);color:var(--text-primary);font-family:var(--font-ui);font-size:15px;letter-spacing:.02em}
+
+/* ── SCROLLBAR ─────────────────────────────────────────────── */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--bg1)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* ── SHELL ─────────────────────────────────────────────────── */
+.app-shell{display:grid;grid-template-columns:220px 1fr;height:100vh;overflow:hidden}
+
+/* ── SIDEBAR ───────────────────────────────────────────────── */
+.sidebar{
+  background:var(--bg1);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  padding:0;overflow:hidden;
+  position:relative;
+}
+.sidebar::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--cyan),transparent);
+  opacity:.5;
+}
+
+.brand{
+  padding:20px 18px 18px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:12px;
+}
+.brand-mark{
+  width:38px;height:38px;border-radius:var(--r);
+  background:linear-gradient(135deg,var(--cyan-dim),var(--cyan));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-head);font-weight:700;font-size:14px;
+  color:var(--bg0);letter-spacing:.05em;flex-shrink:0;
+  box-shadow:0 0 16px var(--cyan-glow);
+}
+.brand strong{display:block;font-family:var(--font-head);font-weight:700;font-size:16px;color:var(--text-primary);letter-spacing:.08em;line-height:1}
+.brand span{font-size:10px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.12em}
+
+.nav-list{padding:12px 10px;display:flex;flex-direction:column;gap:2px}
+.nav-item{
+  background:none;border:none;cursor:pointer;
+  padding:10px 14px;border-radius:var(--r);
+  color:var(--text-secondary);font-family:var(--font-ui);font-size:14px;font-weight:600;
+  text-align:left;letter-spacing:.06em;text-transform:uppercase;
+  transition:all .15s;display:flex;align-items:center;gap:10px;
+}
+.nav-item::before{
+  content:'';width:6px;height:6px;border-radius:50%;
+  background:var(--border2);flex-shrink:0;transition:all .15s;
+}
+.nav-item:hover{color:var(--text-primary);background:var(--bg3)}
+.nav-item.active{color:var(--cyan);background:var(--cyan-glow)}
+.nav-item.active::before{background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+
+.side-info{
+  margin:auto 12px 16px;padding:14px;
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-lg);
+}
+.side-info .eyebrow{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.14em;color:var(--text-secondary);margin-bottom:4px}
+.side-info strong{display:block;font-family:var(--font-head);font-size:20px;font-weight:700;color:var(--amber);margin-bottom:6px}
+.side-info p{font-size:12px;color:var(--text-secondary);line-height:1.4}
+
+.clock{
+  padding:10px 18px 16px;
+  font-family:var(--font-mono);font-size:22px;color:var(--cyan);
+  text-align:center;letter-spacing:.08em;
+}
+.clock-date{font-size:10px;color:var(--text-secondary);text-align:center;letter-spacing:.1em;text-transform:uppercase;padding-bottom:8px}
+
+/* ── MAIN ──────────────────────────────────────────────────── */
+.dashboard{
+  display:grid;
+  grid-template-rows:auto auto 1fr;
+  overflow:hidden;background:var(--bg0);
+}
+
+/* ── TOPBAR ────────────────────────────────────────────────── */
+.topbar{
+  padding:16px 24px 14px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--bg1);gap:16px;flex-wrap:wrap;
+}
+.eyebrow{font-size:9px;text-transform:uppercase;letter-spacing:.16em;color:var(--text-secondary)}
+h1{font-family:var(--font-head);font-weight:700;font-size:26px;letter-spacing:.06em;line-height:1;margin-top:2px}
+
+.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.select-wrap{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.1em}
+.select-wrap select{
+  background:var(--bg2);border:1px solid var(--border2);color:var(--text-primary);
+  padding:6px 10px;border-radius:var(--r);font-family:var(--font-ui);font-size:13px;
+  cursor:pointer;outline:none;
+}
+.select-wrap select:focus{border-color:var(--cyan)}
+
+/* ── KPI GRID ──────────────────────────────────────────────── */
+.kpi-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:1px;background:var(--border);
+  border-bottom:1px solid var(--border);
+}
+.metric-card{
+  background:var(--bg1);padding:16px 20px;
+  display:flex;flex-direction:column;gap:4px;
+  position:relative;overflow:hidden;
+  transition:background .2s;
+}
+.metric-card::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:var(--border2);transition:all .3s;
+}
+.metric-card:hover{background:var(--bg2)}
+.metric-card:hover::after{background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+.metric-card>span{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--text-secondary)}
+.metric-card>strong{font-family:var(--font-mono);font-size:30px;color:var(--text-primary);line-height:1}
+.metric-card small{font-size:12px;font-family:var(--font-mono)}
+small.positive{color:var(--green)}
+small.negative{color:var(--red)}
+small.neutral{color:var(--amber)}
+
+/* ── CONTENT GRID ──────────────────────────────────────────── */
+.content-scroll{overflow-y:auto;padding:16px}
+.layout-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  grid-template-rows:auto auto auto;
+  gap:14px;
+}
+
+/* ── PANELS ────────────────────────────────────────────────── */
+.panel{
+  background:var(--bg1);border:1px solid var(--border);
+  border-radius:var(--r-lg);overflow:hidden;
+}
+.panel-heading{
+  padding:14px 18px 10px;
+  display:flex;align-items:flex-start;justify-content:space-between;
+  border-bottom:1px solid var(--border);
+}
+.panel-heading .eyebrow{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.14em;color:var(--text-secondary);margin-bottom:2px}
+.panel-heading h2{font-family:var(--font-head);font-size:18px;font-weight:700;letter-spacing:.06em;line-height:1}
+
+.badge{
+  padding:3px 10px;border-radius:20px;font-size:11px;
+  font-family:var(--font-mono);letter-spacing:.06em;
+  background:var(--bg3);border:1px solid var(--border2);color:var(--text-secondary);
+  white-space:nowrap;
+}
+.badge.good{background:rgba(46,204,113,.12);border-color:rgba(46,204,113,.3);color:var(--green)}
+.badge.warn{background:rgba(245,166,35,.12);border-color:rgba(245,166,35,.3);color:var(--amber)}
+.badge.crit{background:rgba(255,71,87,.12);border-color:rgba(255,71,87,.3);color:var(--red)}
+
+.icon-button{
+  background:var(--bg3);border:1px solid var(--border2);color:var(--text-secondary);
+  width:30px;height:30px;border-radius:var(--r);cursor:pointer;font-size:16px;
+  display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;
+}
+.icon-button:hover{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 10px var(--cyan-glow)}
+.spinning{animation:spin .5s ease-out}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.text-button{
+  background:none;border:none;color:var(--cyan);font-family:var(--font-ui);
+  font-size:12px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;
+  font-weight:600;padding:4px 0;transition:opacity .2s;
+}
+.text-button:hover{opacity:.7}
+
+/* ── ROUTE MAP ─────────────────────────────────────────────── */
+.route-panel{grid-column:span 2}
+.route-map{padding:10px 16px 14px}
+.route-map svg{width:100%;height:auto;display:block}
+
+/* SVG styles embedded */
+.route-line{fill:none;stroke-width:2;stroke-linecap:round}
+.route-line.main{stroke:var(--cyan);stroke-dasharray:none;opacity:.8}
+.route-line.secondary{stroke:var(--amber);opacity:.6}
+.route-line.delayed{stroke:var(--red);stroke-dasharray:6 4;opacity:.7}
+.node circle{fill:var(--bg3);stroke:var(--cyan-dim);stroke-width:2}
+.node.hub circle{stroke:var(--cyan);stroke-width:2.5;fill:var(--bg2);filter:drop-shadow(0 0 6px var(--cyan))}
+.node.alert circle{stroke:var(--red);stroke-width:2;animation:pulse-node 1.5s infinite}
+@keyframes pulse-node{0%,100%{filter:drop-shadow(0 0 3px var(--red))}50%{filter:drop-shadow(0 0 10px var(--red))}}
+.node text{fill:var(--text-secondary);font-family:var(--font-mono);font-size:10px;text-anchor:middle}
+.node.hub text{fill:var(--text-primary)}
+.vehicle{fill:var(--cyan);filter:drop-shadow(0 0 4px var(--cyan))}
+.vehicle.v2{fill:var(--amber);filter:drop-shadow(0 0 4px var(--amber))}
+
+.route-legend{
+  display:flex;gap:16px;padding:0 16px 14px;flex-wrap:wrap;
+}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary);font-family:var(--font-mono)}
+.legend-dot{width:10px;height:3px;border-radius:2px}
+
+/* ── BAR CHART ─────────────────────────────────────────────── */
+.bar-chart{padding:14px 18px;height:200px;display:flex;align-items:flex-end;gap:6px}
+.bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%}
+.bar-outer{flex:1;width:100%;display:flex;align-items:flex-end;position:relative}
+.bar{
+  width:100%;border-radius:3px 3px 0 0;
+  background:linear-gradient(to top,var(--cyan-dim),var(--cyan));
+  transition:height .4s cubic-bezier(.34,1.56,.64,1);
+  position:relative;
+}
+.bar.below{background:linear-gradient(to top,var(--red-dim),var(--red))}
+.bar:hover::after{
+  content:attr(data-val);
+  position:absolute;top:-22px;left:50%;transform:translateX(-50%);
+  background:var(--bg3);color:var(--cyan);font-family:var(--font-mono);font-size:10px;
+  padding:2px 5px;border-radius:3px;white-space:nowrap;border:1px solid var(--border2);
+}
+.bar-label{font-family:var(--font-mono);font-size:9px;color:var(--text-secondary)}
+
+/* ── FLEET ─────────────────────────────────────────────────── */
+.fleet-list{padding:10px 12px 12px;display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto}
+.fleet-item{
+  display:grid;grid-template-columns:30px 1fr auto;align-items:center;gap:10px;
+  padding:8px 10px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--border);
+}
+.fleet-icon{
+  width:28px;height:28px;border-radius:4px;
+  display:flex;align-items:center;justify-content:center;font-size:14px;
+  background:var(--bg3);
+}
+.fleet-name{font-size:13px;font-weight:600;font-family:var(--font-ui)}
+.fleet-route{font-family:var(--font-mono);font-size:10px;color:var(--text-secondary)}
+.fleet-status{
+  font-family:var(--font-mono);font-size:10px;padding:2px 7px;
+  border-radius:10px;
+}
+.status-active{background:rgba(46,204,113,.15);color:var(--green);border:1px solid rgba(46,204,113,.3)}
+.status-delay{background:rgba(255,71,87,.15);color:var(--red);border:1px solid rgba(255,71,87,.3)}
+.status-wait{background:rgba(245,166,35,.15);color:var(--amber);border:1px solid rgba(245,166,35,.3)}
+
+/* ── TABLE ─────────────────────────────────────────────────── */
+table{width:100%;border-collapse:collapse}
+thead th{
+  padding:8px 14px;font-size:10px;text-transform:uppercase;letter-spacing:.12em;
+  color:var(--text-secondary);text-align:left;border-bottom:1px solid var(--border);
+  font-weight:600;
+}
+tbody tr{border-bottom:1px solid var(--border);transition:background .15s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--bg2)}
+tbody td{padding:9px 14px;font-size:13px}
+td:nth-child(2),td:nth-child(3){font-family:var(--font-mono);font-size:12px}
+.inv-tag{
+  display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;
+  font-family:var(--font-mono);
+}
+.inv-tag.critico{background:rgba(255,71,87,.15);color:var(--red);border:1px solid rgba(255,71,87,.3)}
+.inv-tag.bajo{background:rgba(245,166,35,.15);color:var(--amber);border:1px solid rgba(245,166,35,.3)}
+.inv-tag.ok{background:rgba(46,204,113,.15);color:var(--green);border:1px solid rgba(46,204,113,.3)}
+
+/* ── ORDERS ────────────────────────────────────────────────── */
+.wide-panel{grid-column:span 2}
+.segmented{display:flex;gap:2px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:2px}
+.segmented button{
+  background:none;border:none;cursor:pointer;
+  padding:4px 12px;border-radius:4px;font-family:var(--font-ui);
+  font-size:12px;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--text-secondary);transition:all .15s;font-weight:600;
+}
+.segmented button.active{background:var(--bg3);color:var(--text-primary)}
+
+.orders{padding:10px 14px 14px;display:flex;flex-direction:column;gap:6px}
+.order-row{
+  display:grid;grid-template-columns:90px 1fr 100px 90px 80px;align-items:center;gap:12px;
+  padding:10px 12px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--border);
+  border-left:3px solid transparent;transition:all .2s;
+}
+.order-row:hover{background:var(--bg3);border-color:var(--border2)}
+.order-row.risk-high{border-left-color:var(--red)}
+.order-row.risk-medium{border-left-color:var(--amber)}
+.order-id{font-family:var(--font-mono);font-size:12px;color:var(--cyan)}
+.order-dest{font-size:13px;font-weight:600}
+.order-eta{font-family:var(--font-mono);font-size:11px;color:var(--text-secondary)}
+.order-issue{font-size:11px;color:var(--text-secondary)}
+.risk-pill{
+  padding:3px 8px;border-radius:10px;font-size:10px;font-family:var(--font-mono);
+  text-align:center;
+}
+.risk-pill.high{background:rgba(255,71,87,.15);color:var(--red)}
+.risk-pill.medium{background:rgba(245,166,35,.15);color:var(--amber)}
+
+/* ── SCAN LINE OVERLAY ─────────────────────────────────────── */
+.dashboard::before{
+  content:'';position:fixed;top:0;left:220px;right:0;bottom:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px);
+  pointer-events:none;z-index:0;
+}
+
+/* ── FADE IN ───────────────────────────────────────────────── */
+.panel{animation:fadeUp .4s ease both}
+.panel:nth-child(1){animation-delay:.05s}
+.panel:nth-child(2){animation-delay:.1s}
+.panel:nth-child(3){animation-delay:.15s}
+.panel:nth-child(4){animation-delay:.2s}
+.panel:nth-child(5){animation-delay:.25s}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+.metric-card{animation:fadeUp .3s ease both}
+.metric-card:nth-child(1){animation-delay:.0s}
+.metric-card:nth-child(2){animation-delay:.05s}
+.metric-card:nth-child(3){animation-delay:.1s}
+.metric-card:nth-child(4){animation-delay:.15s}
+
+/* ── RESPONSIVE ────────────────────────────────────────────── */
+@media(max-width:1100px){
+  .layout-grid{grid-template-columns:1fr}
+  .route-panel,.wide-panel{grid-column:span 1}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">LX</div>
+      <div>
+        <strong>LogixOps</strong>
+        <span>Control Tower</span>
+      </div>
+    </div>
+
+    <nav class="nav-list" aria-label="Secciones">
+      <button class="nav-item active" type="button">Panel</button>
+      <button class="nav-item" type="button">Rutas</button>
+      <button class="nav-item" type="button">Flota</button>
+      <button class="nav-item" type="button">Inventario</button>
+      <button class="nav-item" type="button">Alertas</button>
+    </nav>
+
+    <div style="padding:0 10px 10px;margin-top:auto">
+      <div class="clock" id="clock">--:--:--</div>
+      <div class="clock-date">Lun · 4 Mayo 2026</div>
+      <div class="side-info">
+        <span class="eyebrow">Turno actual</span>
+        <strong>06:00 – 14:00</strong>
+        <p>Base Norte opera con capacidad alta. Dos muelles en espera.</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="dashboard">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div>
+        <span class="eyebrow">Salta · 4 Mayo 2026</span>
+        <h1>Dashboard de Logística</h1>
+      </div>
+      <div class="actions">
+        <label class="select-wrap">
+          <span>Región</span>
+          <select id="regionFilter">
+            <option value="all">Todas</option>
+            <option value="salta" selected>Salta</option>
+          </select>
+        </label>
+        <label class="select-wrap">
+          <span>Período</span>
+          <select id="periodFilter">
+            <option value="today">Hoy</option>
+            <option value="week">Semana</option>
+            <option value="month">Mes</option>
+          </select>
+        </label>
+      </div>
+    </header>
+
+    <!-- KPIs -->
+    <section class="kpi-grid" aria-label="Indicadores principales">
+      <article class="metric-card">
+        <span>Entregas a tiempo</span>
+        <strong id="onTimeMetric">94.8%</strong>
+        <small class="positive">↑ +2.1 pts</small>
+      </article>
+      <article class="metric-card">
+        <span>Pedidos en ruta</span>
+        <strong id="inTransitMetric">1.284</strong>
+        <small class="neutral">312 críticos</small>
+      </article>
+      <article class="metric-card">
+        <span>Uso de flota</span>
+        <strong id="fleetMetric">81%</strong>
+        <small class="positive">↑ +6 unidades</small>
+      </article>
+      <article class="metric-card">
+        <span>Costo por km</span>
+        <strong id="costMetric">$1.42</strong>
+        <small class="negative">↑ +3.4%</small>
+      </article>
+    </section>
+
+    <!-- CONTENT -->
+    <div class="content-scroll">
+      <div class="layout-grid">
+
+        <!-- ROUTE MAP -->
+        <article class="panel route-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">Red de distribución</span>
+              <h2>Rutas activas</h2>
+            </div>
+            <button id="optimizeBtn" class="icon-button" type="button" title="Optimizar rutas">↻</button>
+          </div>
+          <div class="route-map">
+            <svg viewBox="0 0 720 300" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <filter id="glow">
+                  <feGaussianBlur stdDeviation="3" result="blur"/>
+                  <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+              </defs>
+              <!-- Grid lines -->
+              <line x1="0" y1="60" x2="720" y2="60" stroke="#1e2840" stroke-width=".5"/>
+              <line x1="0" y1="150" x2="720" y2="150" stroke="#1e2840" stroke-width=".5"/>
+              <line x1="0" y1="240" x2="720" y2="240" stroke="#1e2840" stroke-width=".5"/>
+              <line x1="180" y1="0" x2="180" y2="300" stroke="#1e2840" stroke-width=".5"/>
+              <line x1="360" y1="0" x2="360" y2="300" stroke="#1e2840" stroke-width=".5"/>
+              <line x1="540" y1="0" x2="540" y2="300" stroke="#1e2840" stroke-width=".5"/>
+              <!-- Routes -->
+              <path class="route-line main" d="M80 220 C160 110 250 90 358 155 S530 240 628 90" filter="url(#glow)"/>
+              <path class="route-line secondary" d="M110 80 C205 180 280 230 440 200 S565 165 645 230"/>
+              <path class="route-line delayed" d="M95 225 C200 255 300 275 440 245"/>
+              <!-- Nodes -->
+              <g class="node hub" transform="translate(80,220)"><circle r="16"/><text y="36" font-size="10">Barrio Norte</text></g>
+              <g class="node" transform="translate(110,80)"><circle r="11"/><text y="-18" font-size="10">General Güemes</text></g>
+              <g class="node hub" transform="translate(358,155)"><circle r="18"/><text y="-26" font-size="10">Centro</text></g>
+              <g class="node" transform="translate(440,245)"><circle r="11"/><text y="30" font-size="10">La Merced</text></g>
+              <g class="node" transform="translate(628,90)"><circle r="11"/><text y="-18" font-size="10">Villa Mitre</text></g>
+              <g class="node alert" transform="translate(645,230)"><circle r="12"/><text y="30" font-size="10">Cerrillos</text></g>
+              <!-- Vehicles -->
+              <circle class="vehicle v1" r="6" filter="url(#glow)">
+                <animateMotion dur="9s" repeatCount="indefinite" path="M80 220 C160 110 250 90 358 155 S530 240 628 90"/>
+              </circle>
+              <circle class="vehicle v2" r="6" filter="url(#glow)">
+                <animateMotion dur="11s" repeatCount="indefinite" path="M110 80 C205 180 280 230 440 200 S565 165 645 230"/>
+              </circle>
+            </svg>
+          </div>
+          <div class="route-legend">
+            <span class="legend-item"><span class="legend-dot" style="background:var(--cyan)"></span>Principal</span>
+            <span class="legend-item"><span class="legend-dot" style="background:var(--amber)"></span>Secundaria</span>
+            <span class="legend-item"><span class="legend-dot" style="background:var(--red);background-image:repeating-linear-gradient(90deg,var(--red) 0,var(--red) 4px,transparent 4px,transparent 8px)"></span>Demorada</span>
+          </div>
+        </article>
+
+        <!-- DELIVERY CHART -->
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">SLA</span>
+              <h2>Entregas por hora</h2>
+            </div>
+            <span id="slaBadge" class="badge good">Estable</span>
+          </div>
+          <div id="deliveryChart" class="bar-chart"></div>
+        </article>
+
+        <!-- FLEET -->
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">Operaciones</span>
+              <h2>Flota</h2>
+            </div>
+            <span class="badge">128 unidades</span>
+          </div>
+          <div class="fleet-list" id="fleetList"></div>
+        </article>
+
+        <!-- INVENTORY -->
+        <article class="panel">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">Almacén</span>
+              <h2>Inventario crítico</h2>
+            </div>
+            <button class="text-button" id="exportBtn" type="button">Exportar</button>
+          </div>
+          <table>
+            <thead>
+              <tr><th>SKU</th><th>Stock</th><th>Demanda</th><th>Estado</th></tr>
+            </thead>
+            <tbody id="inventoryTable"></tbody>
+          </table>
+        </article>
+
+        <!-- ORDERS AT RISK -->
+        <article class="panel wide-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="eyebrow">Excepciones</span>
+              <h2>Pedidos con riesgo</h2>
+            </div>
+            <div class="segmented" id="riskFilter">
+              <button class="active" type="button" data-risk="all">Todos</button>
+              <button type="button" data-risk="high">Alto</button>
+              <button type="button" data-risk="medium">Medio</button>
+            </div>
+          </div>
+          <div class="orders" id="ordersList"></div>
+        </article>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+/* ── DATA ─────────────────────────────────────────────────── */
+const deliveryData = [
+  {h:'06',v:42,sla:40},{h:'07',v:38,sla:40},{h:'08',v:71,sla:40},
+  {h:'09',v:86,sla:40},{h:'10',v:91,sla:40},{h:'11',v:68,sla:40},
+  {h:'12',v:55,sla:40},{h:'13',v:79,sla:40},{h:'14',v:62,sla:40},
+];
+
+const fleetData = [
+  {icon:'🚛',name:'Unidad 014',route:'Norte → Centro',status:'active'},
+  {icon:'🚚',name:'Unidad 027',route:'Centro → Litoral',status:'active'},
+  {icon:'🚛',name:'Unidad 038',route:'Cuyo → Sur',status:'delay'},
+  {icon:'🚚',name:'Unidad 051',route:'AMBA → Centro',status:'wait'},
+  {icon:'🚛',name:'Unidad 066',route:'Sur → Norte',status:'active'},
+  {icon:'🚚',name:'Unidad 083',route:'Litoral → AMBA',status:'active'},
+];
+
+const inventoryData = [
+  {sku:'MAT-0042',stock:8,demand:120,state:'critico'},
+  {sku:'PAK-1193',stock:31,demand:85,state:'bajo'},
+  {sku:'FRG-0017',stock:4,demand:60,state:'critico'},
+  {sku:'ELE-2250',stock:145,demand:90,state:'ok'},
+  {sku:'LAB-0831',stock:22,demand:75,state:'bajo'},
+];
+
+const ordersData = [
+  {id:'ORD-8821',dest:'Rosario, SF',eta:'14:30',issue:'Retraso tráfico',risk:'high'},
+  {id:'ORD-9104',dest:'Mendoza',eta:'16:00',issue:'Temperatura crítica',risk:'high'},
+  {id:'ORD-7753',dest:'Córdoba',eta:'13:45',issue:'Ventana de entrega ajustada',risk:'medium'},
+  {id:'ORD-8390',dest:'Tucumán',eta:'17:15',issue:'Chofer sin confirmar',risk:'medium'},
+  {id:'ORD-9210',dest:'La Plata, BA',eta:'12:50',issue:'Dirección incompleta',risk:'medium'},
+];
+
+/* ── CLOCK ────────────────────────────────────────────────── */
+function updateClock(){
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+}
+updateClock();
+setInterval(updateClock,1000);
+
+/* ── BAR CHART ────────────────────────────────────────────── */
+function buildChart(){
+  const el = document.getElementById('deliveryChart');
+  const max = Math.max(...deliveryData.map(d=>d.v));
+  el.innerHTML = deliveryData.map(d=>{
+    const pct = Math.round((d.v/max)*100);
+    const below = d.v < d.sla;
+    return `<div class="bar-wrap">
+      <div class="bar-outer">
+        <div class="bar${below?' below':''}" style="height:${pct}%" data-val="${d.v}"></div>
+      </div>
+      <span class="bar-label">${d.h}h</span>
+    </div>`;
+  }).join('');
+  // animate bars
+  requestAnimationFrame(()=>{
+    el.querySelectorAll('.bar').forEach((b,i)=>{
+      const h = b.style.height;
+      b.style.height='0';
+      setTimeout(()=>{b.style.height=h},i*60+100);
+    });
+  });
+}
+buildChart();
+
+/* ── FLEET LIST ───────────────────────────────────────────── */
+function buildFleet(){
+  const el = document.getElementById('fleetList');
+  const statusMap = {active:['status-active','En ruta'],delay:['status-delay','Demorada'],wait:['status-wait','En espera']};
+  el.innerHTML = fleetData.map(f=>{
+    const [cls,label] = statusMap[f.status];
+    return `<div class="fleet-item">
+      <div class="fleet-icon">${f.icon}</div>
+      <div>
+        <div class="fleet-name">${f.name}</div>
+        <div class="fleet-route">${f.route}</div>
+      </div>
+      <span class="fleet-status ${cls}">${label}</span>
+    </div>`;
+  }).join('');
+}
+buildFleet();
+
+/* ── INVENTORY TABLE ──────────────────────────────────────── */
+function buildInventory(){
+  const el = document.getElementById('inventoryTable');
+  const labelMap = {critico:'Crítico',bajo:'Bajo',ok:'Normal'};
+  el.innerHTML = inventoryData.map(r=>`<tr>
+    <td style="font-family:var(--font-mono);font-size:12px;color:var(--cyan)">${r.sku}</td>
+    <td>${r.stock}</td><td>${r.demand}</td>
+    <td><span class="inv-tag ${r.state}">${labelMap[r.state]}</span></td>
+  </tr>`).join('');
+}
+buildInventory();
+
+/* ── ORDERS LIST ──────────────────────────────────────────── */
+let activeRisk = 'all';
+function buildOrders(){
+  const el = document.getElementById('ordersList');
+  const filtered = activeRisk==='all' ? ordersData : ordersData.filter(o=>o.risk===activeRisk);
+  el.innerHTML = filtered.map(o=>`<div class="order-row risk-${o.risk}">
+    <span class="order-id">${o.id}</span>
+    <span class="order-dest">${o.dest}</span>
+    <span class="order-eta">ETA ${o.eta}</span>
+    <span class="order-issue">${o.issue}</span>
+    <span class="risk-pill ${o.risk}">${o.risk==='high'?'Alto':'Medio'}</span>
+  </div>`).join('');
+}
+buildOrders();
+
+document.getElementById('riskFilter').addEventListener('click',e=>{
+  const btn = e.target.closest('[data-risk]');
+  if(!btn) return;
+  document.querySelectorAll('#riskFilter button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  activeRisk = btn.dataset.risk;
+  buildOrders();
+});
+
+/* ── OPTIMIZE BUTTON ──────────────────────────────────────── */
+document.getElementById('optimizeBtn').addEventListener('click',function(){
+  this.classList.add('spinning');
+  setTimeout(()=>this.classList.remove('spinning'),500);
+});
+
+/* ── NAV ITEMS ────────────────────────────────────────────── */
+document.querySelectorAll('.nav-item').forEach(btn=>{
+  btn.addEventListener('click',function(){
+    document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+/* ── FILTERS ──────────────────────────────────────────────── */
+document.getElementById('periodFilter').addEventListener('change',function(){
+  const badge = document.getElementById('slaBadge');
+  if(this.value==='month'){badge.className='badge warn';badge.textContent='Bajo demanda';}
+  else if(this.value==='week'){badge.className='badge good';badge.textContent='Estable';}
+  else{badge.className='badge good';badge.textContent='Estable';}
+});
+
+/* ── EXPORT ───────────────────────────────────────────────── */
+document.getElementById('exportBtn').addEventListener('click',function(){
+  const rows = [['SKU','Stock','Demanda','Estado'],
+    ...inventoryData.map(r=>[r.sku,r.stock,r.demand,r.state])];
+  const csv = rows.map(r=>r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download = 'inventario_critico.csv';
+  a.click();
+});
+</script>
+</body>
+</html>
