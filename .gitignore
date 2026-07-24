@@ -1,0 +1,12 @@
+# Secretos — NUNCA subir (repo público)
+copy(localStorage.jwt).txt
+*.jwt
+*jwt*.txt
+
+# Config local del editor / deploy
+.claude/
+.netlify/
+.vscode/
+
+# Bundles locales
+files.zip

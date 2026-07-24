@@ -1,0 +1,14 @@
+LINKS APP CHOFERES — MARTEL DELIVERY
+=====================================
+(v3 — 10/07/2026: agregado boton "En camino a tu domicilio". Repartir de nuevo con &v=3)
+
+Victor:    https://logisticamartel-ops.github.io/martel-delivery/chofer.html?c=victor&v=3
+Cacho:     https://logisticamartel-ops.github.io/martel-delivery/chofer.html?c=cacho&v=3
+Puma:      https://logisticamartel-ops.github.io/martel-delivery/chofer.html?c=puma&v=3
+Guillermo: https://logisticamartel-ops.github.io/martel-delivery/chofer.html?c=guillermo&v=3
+Gustavo:   https://logisticamartel-ops.github.io/martel-delivery/chofer.html?c=gustavo&v=3
+Rafael:    https://logisticamartel-ops.github.io/martel-delivery/chofer.html?c=rafael&v=3
+Fernando:  https://logisticamartel-ops.github.io/martel-delivery/chofer.html?c=fernando&v=3
+
+NOTA: si en el futuro se publica otro cambio y hay que forzar version nueva,
+subir el numero (v=4, v=5, ...) y repartir los links de nuevo.
